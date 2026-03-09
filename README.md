@@ -1,4 +1,4 @@
-# Boston Housing Price Prediction
+# House Price Prediction Using the Ames Housing Dataset
 
 ## Project Description
 
@@ -123,11 +123,13 @@ We will compare a baseline linear regression model with more advanced models and
 
 ## Data Collection Plan
 
-- **Primary Dataset:** House Prices – Advanced Regression Techniques  
+- **Primary Dataset:** House Prices – Advanced Regression Techniques, Ames Housing Data Set 
 - **Source:** Kaggle (public dataset)  
   https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data  
 - **Data Type:** Tabular CSV files  
 - **Collection Method:** Downloading the dataset directly from Kaggle and storing it locally in the project repository  
+
+The Ames Housing dataset is widely used in data science education because it contains a large number of detailed housing features, making it suitable for exploratory data analysis, feature engineering, and predictive modeling.
 
 As an alternative reference dataset, the classic Boston Housing dataset may also be used for comparison:
 
@@ -206,3 +208,8 @@ These visualizations will support interpretation of both the data and model perf
 - Evaluate models using MAE, RMSE, and R²  
 - Compare baseline and more advanced models  
 - Analyze prediction errors and residual patterns  
+
+## How to run the project 
+- make install
+- make clean
+- make run

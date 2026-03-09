@@ -1,0 +1,4 @@
+Linear Regression Results
+MAE: 16399.60
+RMSE: 22505.62
+R^2: 0.9035

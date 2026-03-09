@@ -3,18 +3,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data_filename = 'train.csv'
+data_filename = "data/raw/train.csv"
 df = pd.read_csv(data_filename)
 
 print(df.head())
 print(df.info())
 
 # Print one value
-print(df.iloc[7,2])
-
-# Select predictor and response
-x_true = df["LotArea"].iloc[5:13]
-y_true = df["SalePrice"].iloc[5:13]
+print(df.iloc[7, 2])
 
 # Scatter plot 1
 plt.scatter(df["GrLivArea"], df["SalePrice"])
@@ -30,15 +26,15 @@ plt.ylabel("SalePrice")
 plt.title("LotArea vs SalePrice")
 plt.show()
 
-# # Correlation heatmap
-# numeric_df = df.select_dtypes(include=[np.number])
-
-# plt.figure(figsize=(10,8))
-# sns.heatmap(numeric_df.corr(), cmap="coolwarm")
-# plt.title("Correlation Matrix")
-# plt.show()
+# Correlation heatmap
+numeric_df = df.select_dtypes(include=[np.number])
+plt.figure(figsize=(10, 8))
+sns.heatmap(numeric_df.corr(), cmap="coolwarm")
+plt.title("Correlation Matrix")
+plt.show()
 
 # Boxplot
+plt.figure(figsize=(8, 6))
 sns.boxplot(x="OverallQual", y="SalePrice", data=df)
 plt.title("SalePrice vs OverallQual")
 plt.show()
