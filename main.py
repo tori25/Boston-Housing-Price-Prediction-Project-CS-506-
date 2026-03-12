@@ -3,38 +3,44 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data_filename = "data/raw/train.csv"
-df = pd.read_csv(data_filename)
+DATA_PATH = "data/raw/train.csv"
 
-print(df.head())
-print(df.info())
 
-# Print one value
-print(df.iloc[7, 2])
+def main():
+    df = pd.read_csv(DATA_PATH)
 
-# Scatter plot 1
-plt.scatter(df["GrLivArea"], df["SalePrice"])
-plt.xlabel("GrLivArea")
-plt.ylabel("SalePrice")
-plt.title("GrLivArea vs SalePrice")
-plt.show()
+    print("\nDataset preview:")
+    print(df.head())
 
-# Scatter plot 2
-plt.scatter(df["LotArea"], df["SalePrice"])
-plt.xlabel("LotArea")
-plt.ylabel("SalePrice")
-plt.title("LotArea vs SalePrice")
-plt.show()
+    print("\nDataset info:")
+    print(df.info())
 
-# Correlation heatmap
-numeric_df = df.select_dtypes(include=[np.number])
-plt.figure(figsize=(10, 8))
-sns.heatmap(numeric_df.corr(), cmap="coolwarm")
-plt.title("Correlation Matrix")
-plt.show()
+    # Scatter plot 1
+    plt.figure()
+    sns.scatterplot(x=df["GrLivArea"], y=df["SalePrice"])
+    plt.title("GrLivArea vs SalePrice")
+    plt.show()
 
-# Boxplot
-plt.figure(figsize=(8, 6))
-sns.boxplot(x="OverallQual", y="SalePrice", data=df)
-plt.title("SalePrice vs OverallQual")
-plt.show()
+    # Scatter plot 2
+    plt.figure()
+    sns.scatterplot(x=df["LotArea"], y=df["SalePrice"])
+    plt.title("LotArea vs SalePrice")
+    plt.show()
+
+    # Correlation heatmap
+    numeric_df = df.select_dtypes(include=[np.number])
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(numeric_df.corr(), cmap="coolwarm")
+    plt.title("Correlation Matrix")
+    plt.show()
+
+    # Boxplot
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x="OverallQual", y="SalePrice", data=df)
+    plt.title("SalePrice vs OverallQual")
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()

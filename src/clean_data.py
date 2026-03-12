@@ -14,6 +14,10 @@ def clean_data():
     # Handle missing values
     df = df.fillna(0)
 
+    # Remove columns with too many missing values
+    columns_to_drop = ["PoolQC", "Fence", "MiscFeature", "Alley"]
+    df = df.drop(columns=columns_to_drop)
+
     # Remove obvious outliers (example: very large living area)
     if "GrLivArea" in df.columns:
         df = df[df["GrLivArea"] < 4000]
@@ -26,6 +30,15 @@ def clean_data():
 
     print("Cleaned data saved to:", PROCESSED_DATA_PATH)
 
+    # Print initial data information
+    print("\nColumn Data Types:")
+    print(df.dtypes)
+
+    # Identify categorical columns
+    categorical_cols = df.select_dtypes(include=["object"]).columns
+
+    print("\nCategorical Column Unique Values:")
+    print(df[categorical_cols].nunique())
 
 if __name__ == "__main__":
     clean_data()
