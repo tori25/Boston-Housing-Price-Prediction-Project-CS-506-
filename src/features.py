@@ -7,10 +7,12 @@ OUTPUT_PATH = "data/processed/train_features.csv"
 
 def create_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    created_features = []
 
     # Total square footage
     if {"TotalBsmtSF", "1stFlrSF", "2ndFlrSF"}.issubset(df.columns):
         df["TotalSF"] = df["TotalBsmtSF"] + df["1stFlrSF"] + df["2ndFlrSF"]
+        created_features.append("TotalSF")
 
     # Total bathrooms
     bathroom_cols = {"FullBath", "HalfBath", "BsmtFullBath", "BsmtHalfBath"}
@@ -21,14 +23,17 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
             + df["BsmtFullBath"]
             + 0.5 * df["BsmtHalfBath"]
         )
+        created_features.append("TotalBathrooms")
 
     # House age at sale
     if {"YrSold", "YearBuilt"}.issubset(df.columns):
         df["HouseAgeAtSale"] = df["YrSold"] - df["YearBuilt"]
+        created_features.append("HouseAgeAtSale")
 
     # Years since remodel at sale
     if {"YrSold", "YearRemodAdd"}.issubset(df.columns):
         df["YearsSinceRemodel"] = df["YrSold"] - df["YearRemodAdd"]
+        created_features.append("YearsSinceRemodel")
 
     # Total porch area
     porch_cols = {"OpenPorchSF", "EnclosedPorch", "3SsnPorch", "ScreenPorch"}
@@ -39,20 +44,27 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
             + df["3SsnPorch"]
             + df["ScreenPorch"]
         )
+        created_features.append("TotalPorchSF")
 
+    print("Created features:", created_features)
     return df
 
 
 def main() -> None:
     df = pd.read_csv(INPUT_PATH)
+    print(f"Input dataset shape: {df.shape}")
+
     feature_df = create_features(df)
 
     os.makedirs("data/processed", exist_ok=True)
     feature_df.to_csv(OUTPUT_PATH, index=False)
 
     print(f"Feature dataset saved to: {OUTPUT_PATH}")
-    print(f"Shape: {feature_df.shape}")
+    print(f"Output dataset shape: {feature_df.shape}")
 
 
 if __name__ == "__main__":
     main()
+
+
+    

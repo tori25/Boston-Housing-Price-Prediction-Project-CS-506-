@@ -1,0 +1,18 @@
+make features
+Feature engineering was used to create additional predictors from the cleaned housing data. 
+New features included total square footage, total number of bathrooms, house age at time of sale, years since remodeling, and total porch area. 
+These features were designed to capture broader structural characteristics that may influence housing prices.
+
+-------------
+
+train_model.py
+The model training pipeline uses the cleaned and engineered housing dataset. 
+Numeric features are imputed using the median, while categorical features are imputed with the most frequent value and one-hot encoded. 
+A baseline Linear Regression model is then trained on an 80/20 train-test split. Performance is evaluated using MAE, RMSE, and R².
+
+One thing to keep in mind
+
+Because you filled many missing values with 0 earlier in clean_data.py, the imputers here may not do much. 
+That is okay for now, but later you may want to improve the cleaning step so numeric missing values are handled more carefully before training.
+
+

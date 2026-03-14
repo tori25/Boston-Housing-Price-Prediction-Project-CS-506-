@@ -11,26 +11,18 @@ def clean_data():
     # Remove duplicate rows
     df = df.drop_duplicates()
 
+    # Remove columns with too many missing values or low usefulness
+    columns_to_drop = ["PoolQC", "Fence", "MiscFeature", "Alley", "Utilities", "LandSlope"]
+    df = df.drop(columns=columns_to_drop, errors="ignore")
+
     # Handle missing values
     df = df.fillna(0)
 
-    # Remove columns with too many missing values
-    columns_to_drop = ["PoolQC", "Fence", "MiscFeature", "Alley"]
-    df = df.drop(columns=columns_to_drop)
-
-    # Remove obvious outliers (example: very large living area)
+    # Remove obvious outliers
     if "GrLivArea" in df.columns:
         df = df[df["GrLivArea"] < 4000]
 
-    # Ensure processed folder exists
-    os.makedirs("data/processed", exist_ok=True)
-
-    # Save cleaned dataset
-    df.to_csv(PROCESSED_DATA_PATH, index=False)
-
-    print("Cleaned data saved to:", PROCESSED_DATA_PATH)
-
-    # Print initial data information
+    # Print cleaned data information
     print("\nColumn Data Types:")
     print(df.dtypes)
 
@@ -39,6 +31,15 @@ def clean_data():
 
     print("\nCategorical Column Unique Values:")
     print(df[categorical_cols].nunique())
+
+    # Ensure processed folder exists
+    os.makedirs("data/processed", exist_ok=True)
+
+    # Save cleaned dataset
+    df.to_csv(PROCESSED_DATA_PATH, index=False)
+
+    print("\nCleaned data saved to:", PROCESSED_DATA_PATH)
+    print("Cleaned dataset shape:", df.shape)
 
 if __name__ == "__main__":
     clean_data()
