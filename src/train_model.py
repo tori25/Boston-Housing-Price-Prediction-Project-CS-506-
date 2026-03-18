@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.cluster import KMeans
 
 INPUT_PATH = "data/processed/train_features.csv"
 MODEL_RESULTS_PATH = "data/processed/model_results.txt"
@@ -185,6 +186,30 @@ def main() -> None:
     )
 
     # -----------------------------
+    # Clustering (K-Means)
+    # -----------------------------
+
+    # Use numeric features only
+    X_cluster = df.select_dtypes(include=["int64", "float64"]).drop(columns=[TARGET_COLUMN])
+
+    # Scale features (IMPORTANT for clustering)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_cluster)
+
+    # Apply KMeans clustering
+    kmeans = KMeans(n_clusters=3, random_state=42)
+    clusters = kmeans.fit_predict(X_scaled)
+
+    # Add cluster labels to dataframe
+    df["Cluster"] = clusters
+
+    print("\nCluster distribution:")
+    print(pd.Series(clusters).value_counts())
+
+    print("\nAverage SalePrice per cluster:")
+    print(df.groupby("Cluster")[TARGET_COLUMN].mean())
+
+    # -----------------------------
     # Save results
     # -----------------------------
 
@@ -204,6 +229,7 @@ def main() -> None:
         f"MAE: {knn_manhattan_mae:.2f}\n"
         f"RMSE: {knn_manhattan_rmse:.2f}\n"
         f"R^2: {knn_manhattan_r2:.4f}\n"
+        f"\nCluster count:\n{pd.Series(clusters).value_counts()}\n"
     )
 
     # Ensure output directory exists

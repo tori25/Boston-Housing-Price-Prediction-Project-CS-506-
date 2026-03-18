@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+from src.zillow_analysis import main as run_zillow_analysis
 
 DATA_PATH = "data/raw/train.csv"
 FEATURE_PATH = "data/processed/train_features.csv"
@@ -84,6 +85,9 @@ def main():
     plt.xlabel("Distance")
     plt.ylabel("Number of Houses")
     plt.show()
+
+    print("\nRunning Zillow Boston visualization...")
+    run_zillow_analysis()
 
 if __name__ == "__main__":
     main()
