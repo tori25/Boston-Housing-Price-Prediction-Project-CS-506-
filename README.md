@@ -153,7 +153,7 @@ The dataset will be downloaded once and used consistently throughout the project
 
 ## Data Cleaning Plan
 
-Data cleaning will include:
+## Data cleaning will include:
 
 - Checking for missing values  
 - Handling outliers  
@@ -213,3 +213,123 @@ These visualizations will support interpretation of both the data and model perf
 - make install
 - make clean
 - make run
+
+
+## Check-In nr. 1
+The main dataset used is the Ames Housing dataset from Kaggle, which contains detailed information about residential homes.
+
+In addition, external Zillow data for Boston, MA was explored to provide real-world market context.
+
+
+## Project Structure 
+
+data/
+  raw/
+    train.csv
+    zillow.csv
+  processed/
+    train_clean.csv
+    train_features.csv
+    model_results.txt
+
+src/
+  clean_data.py
+  features.py
+  train_model.py
+  zillow_analysis.py
+  main.py
+
+## Main Script
+`main.py` is used for exploratory data analysis and visualization, including:
+- Scatter plots
+- Correlation heatmap
+- Boxplots
+
+## Data Processing
+
+Steps Performed
+	1.	Loaded raw dataset from data/raw/train.csv
+	2.	Removed duplicate rows
+	3.	Dropped columns with many missing or low-value features:
+	•	PoolQC, Fence, MiscFeature, Alley, Utilities, LandSlope
+	4.	Handled missing values by filling with default values (e.g., 0)
+	5.	Removed outliers (e.g., very large houses with GrLivArea > 4000)
+	6.	Inspected data types (numeric vs categorical)
+	7.	Analyzed categorical features (number of unique values)
+	8.	Saved cleaned dataset to data/processed/train_clean.csv
+
+Purpose
+
+These steps ensure the dataset is clean, consistent, and ready for modeling.
+
+## Exploratory Data Analysis (EDA)
+
+Several visualizations were created to understand relationships in the data:
+	•	Living Area vs Price
+Larger houses tend to have higher prices (positive relationship).
+
+	•	House Quality vs Price
+Higher-quality houses have significantly higher prices.
+
+	•	Correlation Matrix
+Strong predictors identified:
+
+	•	OverallQual
+	•	GrLivArea
+	•	TotalBsmtSF
+	•	GarageArea
+	•	YearBuilt / YearRemodAdd
+
+These insights guided feature selection for modeling.
+
+Data Modeling
+
+## Models Used
+	•	Linear Regression (baseline model)
+Captures overall relationships between features and price.
+
+	•	K-Nearest Neighbors (KNN)
+Predicts house prices based on similar houses using distance metrics.
+
+	•	K-Means Clustering
+Groups similar houses to identify patterns in the data (used for exploration, not prediction).
+
+## Distance Metrics
+	•	Euclidean Distance
+	•	Manhattan Distance
+
+These are used in KNN to measure similarity between houses.
+
+## Preprocessing for Modeling
+	•	Missing values handled using imputation
+	•	Categorical features encoded using OneHotEncoder
+	•	Features scaled using StandardScaler (important for KNN and clustering)
+
+  Evaluation Metrics
+
+## Models are evaluated using:
+	•	MAE (Mean Absolute Error)
+	•	RMSE (Root Mean Squared Error)
+	•	R² Score
+
+  ## Preliminary Results
+	•	Models are able to capture general trends in the data
+	•	Larger and higher-quality houses tend to have higher predicted prices
+	•	KNN predicts based on similarity, while Linear Regression captures global patterns
+	•	Predictions are not fully accurate yet
+
+## Next Improvements
+	•	Feature selection (use most important variables)
+	•	Hyperparameter tuning (e.g., number of neighbors in KNN)
+	•	Further model optimization
+
+## Zillow Data Integration
+In addition to the Ames dataset, Zillow data for Boston, MA was explored.
+	•	The data was originally in wide format and reshaped into long format
+	•	Used to analyze monthly housing price trends in Boston
+
+In the future: 
+	•	Integrate Zillow data into the modeling pipeline
+	•	Use it to improve prediction accuracy and real-world relevance
+
+
