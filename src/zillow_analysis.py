@@ -1,13 +1,20 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
 ZILLOW_PATH = "data/raw/zillow.csv"
+PLOTS_DIR = "plots"
 
 def main():
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+
     zillow = pd.read_csv(ZILLOW_PATH)
 
     # Keep only Boston
-    zillow_boston = zillow[zillow["RegionName"] == "Boston, MA"]
+    zillow_boston = zillow[zillow["RegionName"] == "Boston, MA"].copy()
+
+    if zillow_boston.empty:
+        raise ValueError("No rows found for 'Boston, MA' in Zillow dataset.")
 
     print("\nBoston rows:")
     print(zillow_boston.head())
@@ -30,10 +37,14 @@ def main():
     )
 
     # Convert types
-    boston_long["Date"] = pd.to_datetime(boston_long["Date"])
+    boston_long["Date"] = pd.to_datetime(boston_long["Date"], errors="coerce")
     boston_long["MedianSalePrice"] = pd.to_numeric(
         boston_long["MedianSalePrice"], errors="coerce"
     )
+
+    # Drop bad rows and sort by date
+    boston_long = boston_long.dropna(subset=["Date", "MedianSalePrice"])
+    boston_long = boston_long.sort_values("Date")
 
     print("\nBoston long format preview:")
     print(boston_long.head())
@@ -46,8 +57,10 @@ def main():
     plt.ylabel("Median Sale Price")
     plt.xticks(rotation=45)
     plt.tight_layout()
+    plt.savefig(f"{PLOTS_DIR}/zillow_boston_trend.png")
     plt.show()
 
+    return boston_long
 
 if __name__ == "__main__":
     main()

@@ -1,95 +1,48 @@
 import os
-import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
-INPUT_PATH = "data/processed/train_features.csv"
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor, plot_tree
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+INPUT_PATH = "data/processed/train_clean.csv"
 MODEL_RESULTS_PATH = "data/processed/model_results.txt"
+PLOTS_DIR = "plots"
 TARGET_COLUMN = "SalePrice"
 
 
-def calculate_euclidean_distance(df: pd.DataFrame) -> float:
-    # Features used to compare physical similarity between two houses
-    features = ["GrLivArea", "TotalBsmtSF", "GarageArea", "TotalBathrooms"]
-
-    # Check that all required columns exist
-    missing_features = [feature for feature in features if feature not in df.columns]
-    if missing_features:
-        raise ValueError(
-            f"Missing required columns for Euclidean distance: {missing_features}"
-        )
-
-    # Select two example houses
-    house1 = df.loc[0, features].values
-    house2 = df.loc[1, features].values
-
-    # Compute Euclidean distance
-    return np.sqrt(np.sum((house1 - house2) ** 2))
-
-
-def calculate_manhattan_distance(df: pd.DataFrame) -> float:
-    # Features used to compare physical similarity between two houses
-    features = ["GrLivArea", "TotalBsmtSF", "GarageArea", "TotalBathrooms"]
-
-    # Check that all required columns exist
-    missing_features = [feature for feature in features if feature not in df.columns]
-    if missing_features:
-        raise ValueError(
-            f"Missing required columns for Manhattan distance: {missing_features}"
-        )
-
-    # Select two example houses
-    house1 = df.loc[0, features].values
-    house2 = df.loc[1, features].values
-
-    # Compute Manhattan distance
-    return np.sum(np.abs(house1 - house2))
-
-
 def evaluate_model(y_true, y_pred):
-    # Return common regression metrics
     mae = mean_absolute_error(y_true, y_pred)
     rmse = mean_squared_error(y_true, y_pred) ** 0.5
     r2 = r2_score(y_true, y_pred)
     return mae, rmse, r2
 
 
-def main() -> None:
-    # Load processed dataset with cleaned and engineered features
+def main():
+    # Ensure folders exist
+    os.makedirs("data/processed", exist_ok=True)
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+
+    # Load cleaned dataset
     df = pd.read_csv(INPUT_PATH)
     print(f"Loaded dataset shape: {df.shape}")
 
-    # Make sure target column exists
+    # Apply feature engineering
+    from src.features import create_features
+    df = create_features(df)
+
     if TARGET_COLUMN not in df.columns:
         raise ValueError(f"Target column '{TARGET_COLUMN}' not found in dataset.")
 
-    # Calculate example distances between house 0 and house 1
-    euclidean_distance = calculate_euclidean_distance(df)
-    manhattan_distance = calculate_manhattan_distance(df)
+    # One-hot encode categorical variables
+    df_encoded = pd.get_dummies(df, drop_first=False)
 
-    print(f"Euclidean distance between house 0 and house 1: {euclidean_distance:.2f}")
-    print(f"Manhattan distance between house 0 and house 1: {manhattan_distance:.2f}")
+    # Split features and target
+    X = df_encoded.drop(columns=[TARGET_COLUMN])
+    y = df_encoded[TARGET_COLUMN]
 
-    # Separate predictors and target
-    X = df.drop(columns=[TARGET_COLUMN])
-    y = df[TARGET_COLUMN]
-
-    # Detect numeric and categorical columns
-    numeric_features = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
-    categorical_features = X.select_dtypes(include=["object"]).columns.tolist()
-
-    print(f"Number of numeric features: {len(numeric_features)}")
-    print(f"Number of categorical features: {len(categorical_features)}")
-
-    # Use one train/test split for Linear Regression
+    # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
@@ -97,151 +50,107 @@ def main() -> None:
     print(f"Training set shape: {X_train.shape}")
     print(f"Test set shape: {X_test.shape}")
 
-    # -----------------------------
-    # Linear Regression model
-    # -----------------------------
-
-    # Preprocess numeric columns
-    numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-        ]
+    # Train decision tree model
+    model = DecisionTreeRegressor(
+        max_depth=5,
+        min_samples_split=10,
+        min_samples_leaf=5,
+        random_state=42
     )
 
-    # Preprocess categorical columns
-    categorical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ]
-    )
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-    # Combine preprocessing by column type
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_transformer, numeric_features),
-            ("cat", categorical_transformer, categorical_features),
-        ]
-    )
+    # Evaluate model
+    mae, rmse, r2 = evaluate_model(y_test, y_pred)
 
-    # Full pipeline for Linear Regression
-    linear_model = Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("regressor", LinearRegression()),
-        ]
-    )
+    # Feature importance
+    importance_df = pd.DataFrame({
+        "Feature": X.columns,
+        "Importance": model.feature_importances_
+    }).sort_values(by="Importance", ascending=False).reset_index(drop=True)
 
-    # Train and predict
-    linear_model.fit(X_train, y_train)
-    linear_predictions = linear_model.predict(X_test)
-
-    # Evaluate Linear Regression
-    linear_mae, linear_rmse, linear_r2 = evaluate_model(y_test, linear_predictions)
-
-    # -----------------------------
-    # KNN models
-    # -----------------------------
-
-    # KNN works best with numeric features only
-    numeric_df = df.select_dtypes(include=["int64", "float64"]).copy()
-
-    X_knn = numeric_df.drop(columns=[TARGET_COLUMN])
-    y_knn = numeric_df[TARGET_COLUMN]
-
-    X_train_knn, X_test_knn, y_train_knn, y_test_knn = train_test_split(
-        X_knn, y_knn, test_size=0.2, random_state=42
-    )
-
-    # KNN with Euclidean distance
-    knn_euclidean_model = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-            ("knn", KNeighborsRegressor(n_neighbors=5, metric="euclidean")),
-        ]
-    )
-
-    knn_euclidean_model.fit(X_train_knn, y_train_knn)
-    knn_euclidean_predictions = knn_euclidean_model.predict(X_test_knn)
-
-    knn_euclidean_mae, knn_euclidean_rmse, knn_euclidean_r2 = evaluate_model(
-        y_test_knn, knn_euclidean_predictions
-    )
-
-    # KNN with Manhattan distance
-    knn_manhattan_model = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-            ("knn", KNeighborsRegressor(n_neighbors=5, metric="manhattan")),
-        ]
-    )
-
-    knn_manhattan_model.fit(X_train_knn, y_train_knn)
-    knn_manhattan_predictions = knn_manhattan_model.predict(X_test_knn)
-
-    knn_manhattan_mae, knn_manhattan_rmse, knn_manhattan_r2 = evaluate_model(
-        y_test_knn, knn_manhattan_predictions
-    )
-
-    # -----------------------------
-    # Clustering (K-Means)
-    # -----------------------------
-
-    # Use numeric features only
-    X_cluster = df.select_dtypes(include=["int64", "float64"]).drop(columns=[TARGET_COLUMN])
-
-    # Scale features (IMPORTANT for clustering)
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_cluster)
-
-    # Apply KMeans clustering
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    clusters = kmeans.fit_predict(X_scaled)
-
-    # Add cluster labels to dataframe
-    df["Cluster"] = clusters
-
-    print("\nCluster distribution:")
-    print(pd.Series(clusters).value_counts())
-
-    print("\nAverage SalePrice per cluster:")
-    print(df.groupby("Cluster")[TARGET_COLUMN].mean())
-
-    # -----------------------------
-    # Save results
-    # -----------------------------
-
+    # Save results to text file
     results = (
-        "Model Comparison Results\n\n"
-        f"Euclidean distance between house 0 and house 1: {euclidean_distance:.2f}\n"
-        f"Manhattan distance between house 0 and house 1: {manhattan_distance:.2f}\n\n"
-        "Linear Regression Results\n"
-        f"MAE: {linear_mae:.2f}\n"
-        f"RMSE: {linear_rmse:.2f}\n"
-        f"R^2: {linear_r2:.4f}\n\n"
-        "KNN Regression (Euclidean) Results\n"
-        f"MAE: {knn_euclidean_mae:.2f}\n"
-        f"RMSE: {knn_euclidean_rmse:.2f}\n"
-        f"R^2: {knn_euclidean_r2:.4f}\n\n"
-        "KNN Regression (Manhattan) Results\n"
-        f"MAE: {knn_manhattan_mae:.2f}\n"
-        f"RMSE: {knn_manhattan_rmse:.2f}\n"
-        f"R^2: {knn_manhattan_r2:.4f}\n"
-        f"\nCluster count:\n{pd.Series(clusters).value_counts()}\n"
+        "Decision Tree Regression Results\n\n"
+        f"Dataset shape: {df.shape}\n"
+        f"Training set shape: {X_train.shape}\n"
+        f"Test set shape: {X_test.shape}\n\n"
+        f"MAE: {mae:.2f}\n"
+        f"RMSE: {rmse:.2f}\n"
+        f"R^2: {r2:.4f}\n\n"
+        "Top 10 Feature Importances\n"
+        f"{importance_df.head(10).to_string(index=False)}\n"
     )
 
-    # Ensure output directory exists
-    os.makedirs("data/processed", exist_ok=True)
-
-    # Save metrics to a text file
     with open(MODEL_RESULTS_PATH, "w", encoding="utf-8") as file:
         file.write(results)
 
-    # Print results
     print("\n" + results)
     print(f"Results saved to: {MODEL_RESULTS_PATH}")
+
+    # -----------------------------
+    # Plot 1: Actual vs Predicted
+    # -----------------------------
+    plt.figure(figsize=(8, 6))
+    plt.scatter(y_test, y_pred, alpha=0.7)
+    plt.xlabel("Actual SalePrice")
+    plt.ylabel("Predicted SalePrice")
+    plt.title("Actual vs Predicted House Prices")
+
+    min_val = min(y_test.min(), y_pred.min())
+    max_val = max(y_test.max(), y_pred.max())
+    plt.plot([min_val, max_val], [min_val, max_val], linestyle="--")
+    plt.tight_layout()
+    plt.savefig(f"{PLOTS_DIR}/actual_vs_predicted.png")
+    plt.show()
+
+    # -----------------------------
+    # Plot 2: Residuals
+    # -----------------------------
+    residuals = y_test - y_pred
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(y_pred, residuals, alpha=0.7)
+    plt.axhline(y=0, linestyle="--")
+    plt.xlabel("Predicted SalePrice")
+    plt.ylabel("Residuals")
+    plt.title("Residual Plot")
+    plt.tight_layout()
+    plt.savefig(f"{PLOTS_DIR}/residual_plot.png")
+    plt.show()
+
+    # -----------------------------
+    # Plot 3: Top 10 Feature Importances
+    # -----------------------------
+    top_features = importance_df.head(10)
+
+    plt.figure(figsize=(10, 6))
+    plt.barh(top_features["Feature"], top_features["Importance"])
+    plt.xlabel("Importance")
+    plt.ylabel("Feature")
+    plt.title("Top 10 Feature Importances")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    plt.savefig(f"{PLOTS_DIR}/feature_importance.png")
+    plt.show()
+
+    # -----------------------------
+    # Plot 4: Decision Tree
+    # -----------------------------
+    plt.figure(figsize=(20, 10))
+    plot_tree(
+        model,
+        feature_names=X.columns,
+        filled=True,
+        rounded=True,
+        fontsize=8,
+        max_depth=2
+    )
+    plt.title("Decision Tree Visualization (Top Levels)")
+    plt.tight_layout()
+    plt.savefig(f"{PLOTS_DIR}/decision_tree.png")
+    plt.show()
 
 
 if __name__ == "__main__":
