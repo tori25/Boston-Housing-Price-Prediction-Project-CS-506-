@@ -1,335 +1,314 @@
-# House Price Prediction Using the Ames Housing Dataset
+# Boston Housing Price Prediction
 
-## Project Description
-
-This project applies the full data science lifecycle to predict housing prices in the Boston area. The goal is to use data science and machine learning methods to analyze housing-related features and build accurate models that estimate median property values.
-
-The project will include data collection, data cleaning, feature engineering, visualization, model training, and evaluation. The scope of the project is two months.
-
-The input features I plan to use include variables such as:
-
-Data fields
-
-MSSubClass: The building class
-MSZoning: The general zoning classification
-LotFrontage: Linear feet of street connected to property
-LotArea: Lot size in square feet
-Street: Type of road access
-Alley: Type of alley access
-LotShape: General shape of property
-LandContour: Flatness of the property
-Utilities: Type of utilities available
-LotConfig: Lot configuration
-LandSlope: Slope of property
-Neighborhood: Physical locations within Ames city limits
-Condition1: Proximity to main road or railroad
-Condition2: Proximity to main road or railroad (if a second is present)
-BldgType: Type of dwelling
-HouseStyle: Style of dwelling
-OverallQual: Overall material and finish quality
-OverallCond: Overall condition rating
-YearBuilt: Original construction date
-YearRemodAdd: Remodel date
-RoofStyle: Type of roof
-RoofMatl: Roof material
-Exterior1st: Exterior covering on house
-Exterior2nd: Exterior covering on house (if more than one material)
-MasVnrType: Masonry veneer type
-MasVnrArea: Masonry veneer area in square feet
-ExterQual: Exterior material quality
-ExterCond: Present condition of the material on the exterior
-Foundation: Type of foundation
-BsmtQual: Height of the basement
-BsmtCond: General condition of the basement
-BsmtExposure: Walkout or garden level basement walls
-BsmtFinType1: Quality of basement finished area
-BsmtFinSF1: Type 1 finished square feet
-BsmtFinType2: Quality of second finished area (if present)
-BsmtFinSF2: Type 2 finished square feet
-BsmtUnfSF: Unfinished square feet of basement area
-TotalBsmtSF: Total square feet of basement area
-Heating: Type of heating
-HeatingQC: Heating quality and condition
-CentralAir: Central air conditioning
-Electrical: Electrical system
-1stFlrSF: First Floor square feet
-2ndFlrSF: Second floor square feet
-LowQualFinSF: Low quality finished square feet (all floors)
-GrLivArea: Above grade (ground) living area square feet
-BsmtFullBath: Basement full bathrooms
-BsmtHalfBath: Basement half bathrooms
-FullBath: Full bathrooms above grade
-HalfBath: Half baths above grade
-Bedroom: Number of bedrooms above basement level
-Kitchen: Number of kitchens
-KitchenQual: Kitchen quality
-TotRmsAbvGrd: Total rooms above grade (does not include bathrooms)
-Functional: Home functionality rating
-Fireplaces: Number of fireplaces
-FireplaceQu: Fireplace quality
-GarageType: Garage location
-GarageYrBlt: Year garage was built
-GarageFinish: Interior finish of the garage
-GarageCars: Size of garage in car capacity
-GarageArea: Size of garage in square feet
-GarageQual: Garage quality
-GarageCond: Garage condition
-PavedDrive: Paved driveway
-WoodDeckSF: Wood deck area in square feet
-OpenPorchSF: Open porch area in square feet
-EnclosedPorch: Enclosed porch area in square feet
-3SsnPorch: Three season porch area in square feet
-ScreenPorch: Screen porch area in square feet
-PoolArea: Pool area in square feet
-PoolQC: Pool quality
-Fence: Fence quality
-MiscFeature: Miscellaneous feature not covered in other categories
-MiscVal: $Value of miscellaneous feature
-MoSold: Month Sold
-YrSold: Year Sold
-SaleType: Type of sale
-SaleCondition: Condition of sale
+> **Presentation video:** *(YouTube link to be added before 5/1 deadline)*
 
 ---
 
-## Project Timeline (Two-Month Plan)
+## How to Build and Run
 
-- **Weeks 1–2:** Data collection and initial data exploration  
-- **Weeks 3–4:** Data cleaning and preprocessing. First Project check-in. 
-- **Week 5:** Feature engineering  
-- **Weeks 6–7:** Model training and evaluation. Second project check-in. 
-- **Week 8:** Final analysis, visualization, report preparation, and repository cleanup  
+**Prerequisites:** Python 3.9+
 
-This timeline reflects a structured and realistic plan for completing the project within two months.
+```bash
+make install      # install all dependencies
+make collect      # download Boston Housing dataset  →  data/raw/boston.csv
+make clean        # clean raw data                   →  data/processed/boston_clean.csv
+make features     # engineer features                →  data/processed/train_features.csv
+make visualize    # generate EDA plots               →  plots/
+make train        # train all models                 →  plots/ + data/processed/model_results.txt
+```
+
+Or run the entire pipeline at once:
+
+```bash
+make all
+```
+
+To run the test suite:
+
+```bash
+make test
+# or
+python3 -m pytest src/tests/test_project.py -v
+```
+
+A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 19 tests automatically on every push and pull request to `main`.
+
+### Output locations
+
+| Output | Path |
+|--------|------|
+| Raw dataset | `data/raw/boston.csv` |
+| Cleaned dataset | `data/processed/boston_clean.csv` |
+| Engineered features | `data/processed/train_features.csv` |
+| Model comparison results | `data/processed/model_results.txt` |
+| Plots | `plots/` |
+
+### Project structure
+
+```
+├── data/
+│   ├── raw/
+│   │   ├── boston.csv              # Boston Housing Dataset (downloaded by collect_data.py)
+│   │   └── zillow.csv              # Zillow Boston median sale price data (pre-downloaded)
+│   └── processed/
+│       ├── boston_clean.csv        # Cleaned dataset
+│       ├── train_features.csv      # Dataset with engineered features
+│       └── model_results.txt       # Model comparison output
+├── src/
+│   ├── collect_data.py             # Downloads Boston Housing Dataset
+│   ├── clean_data.py               # Data cleaning pipeline
+│   ├── features.py                 # Feature engineering
+│   ├── visualize.py                # EDA visualizations
+│   ├── train_model.py              # Model training and evaluation
+│   ├── zillow_analysis.py          # Zillow trend analysis
+│   └── tests/
+│       └── test_project.py         # Unit tests (pytest)
+├── plots/                          # Generated visualizations
+├── main.py                         # Full pipeline entry point
+├── Makefile
+└── requirements.txt
+```
 
 ---
 
-## Project Goals
+## Project Goal
 
-The primary goal of this project is:
+Predict **`medv`** — the median value of owner-occupied homes in $1,000s — for each of 506 Boston neighborhoods using the Boston Housing Dataset (Harrison & Rubinfeld, 1978).
 
-- Successfuly predict the sales price for each house. For each Id in the test set,  must predict the value of the SalePrice variable. 
+The dataset contains 13 features including crime rate, number of rooms, property tax rate, and access to employment centers. The project applies the full data science lifecycle: collection → cleaning → feature engineering → visualization → modeling → evaluation.
 
+Performance is measured with **MAE**, **RMSE**, and **R²**.
 
-This goal is specific and measurable. Model performance will be evaluated using regression metrics including:
-
-- Mean Absolute Error (MAE)  
-- Root Mean Squared Error (RMSE)  
-- R² (coefficient of determination)  
-
-We will compare a baseline linear regression model with more advanced models and determine which approach achieves the lowest prediction error.
+As supplemental real-world context, Zillow median sale price data for Boston, MA is also collected and visualized to show how the market has evolved since the original 1978 dataset.
 
 ---
 
-## Data Collection Plan
+## Data Collection
 
-- **Primary Dataset:** House Prices – Advanced Regression Techniques, Ames Housing Data Set 
-- **Source:** Kaggle (public dataset)  
-  https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data  
-- **Data Type:** Tabular CSV files  
-- **Collection Method:** Downloading the dataset directly from Kaggle and storing it locally in the project repository  
+Implemented in `src/collect_data.py`.
 
-The Ames Housing dataset is widely used in data science education because it contains a large number of detailed housing features, making it suitable for exploratory data analysis, feature engineering, and predictive modeling.
+**Primary dataset:** Boston Housing Dataset loaded via `statsmodels.datasets.get_rdataset("Boston", "MASS")`. Saved to `data/raw/boston.csv`.
 
-As an alternative reference dataset, the classic Boston Housing dataset may also be used for comparison:
+| Feature | Description |
+|---------|-------------|
+| `crim` | Per capita crime rate by town |
+| `zn` | Proportion of residential land zoned for large lots |
+| `indus` | Proportion of non-retail business acres |
+| `chas` | Charles River dummy (1 if tract bounds river) |
+| `nox` | Nitric oxide concentration |
+| `rm` | Average number of rooms per dwelling |
+| `age` | Proportion of units built before 1940 |
+| `dis` | Weighted distance to five employment centers |
+| `rad` | Accessibility index to radial highways |
+| `tax` | Property tax rate per $10,000 |
+| `ptratio` | Pupil-teacher ratio by town |
+| `b` | Racial composition index |
+| `lstat` | % lower-status population |
+| `medv` | **Target** — Median home value in $1,000s |
 
-- https://www.kaggle.com/datasets/vikrishnan/boston-house-prices  
+**Secondary dataset:** Zillow Research Data — Median Sale Price by Metro Area. Used for a trend visualization showing the Boston real estate market from 2010 to present.
 
-The primary dataset contains structured housing and neighborhood features including:
-
-- Lot area  
-- Overall material and finish quality  
-- Year built  
-- Total living area  
-- Garage size  
-- Basement area  
-- Neighborhood  
-- Property tax information  
-- Sale price (target variable)  
-
-The dataset will be downloaded once and used consistently throughout the project to ensure reproducibility.
+The `collect_data.py` script also produces `data/processed/data_inspection.txt` with a full summary of the raw data: shape, dtypes, missing values, and descriptive statistics.
 
 ---
 
-## Data Cleaning Plan
+## Data Cleaning
 
-## Data cleaning will include:
+Implemented in `src/clean_data.py`. Final cleaned dataset: **485 rows × 14 columns**, zero missing values.
 
-- Checking for missing values  
-- Handling outliers  
-- Verifying feature ranges and distributions  
-- Normalizing or scaling numerical features if needed  
-- Splitting data into training and testing subsets  
+### Step 1 — Drop duplicate rows
+**What:** Remove any rows that appear more than once.
+**Why:** Duplicates cause the model to see the same observation multiple times during training, artificially inflating confidence in those data points.
+
+### Step 2 — Remove irrelevant ID columns
+**What:** Drop any column named `id` or `unnamed: 0` (index columns accidentally saved to CSV).
+**Why:** ID columns are arbitrary identifiers with no relationship to home value.
+
+### Step 3 — Fix data types
+**What:** Cast `chas`, `rad`, and `tax` to `int`.
+**Why:** These columns were loaded as `float64` by pandas but are conceptually integers — `chas` is a 0/1 dummy, `rad` is an ordinal index 1–24, `tax` is a whole-number rate. Correct types prevent floating-point noise in distance calculations (KNN).
+
+### Step 4 — Handle missing values
+**What:** Detect columns with missing values and fill with the column median.
+**Why:** The classic Boston dataset has no missing values, but the check is explicit so the script is safe if the source data changes. Median imputation preserves the distribution better than mean imputation when outliers are present.
+
+### Step 5 — Remove censored values
+**What:** Remove all rows where `medv == 50`.
+**Why:** The original dataset artificially caps home values at $50,000. These 16 rows are not real observations — they represent homes worth *at least* $50k but recorded as exactly $50k. Keeping them teaches the model a false ceiling, causing it to systematically underpredict expensive neighborhoods.
+
+### Step 6 — Remove rows with negative feature values
+**What:** Drop any row where a non-target numeric feature is negative.
+**Why:** All Boston Housing features (crime rate, rooms, distance, etc.) are physically non-negative. A negative value indicates a data entry error.
+
+### Step 7 — Remove extreme outliers (crime rate)
+**What:** Remove rows in the top 1% of `crim`, dropping 5 rows.
+**Why:** A small number of Boston tracts have crime rates orders of magnitude above the rest. These extreme values distort Euclidean distances in KNN and skew linear model coefficients. Log-transforming `crim` in feature engineering further tames this distribution.
 
 ---
 
 ## Feature Extraction
 
-Feature engineering may include:
+Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**485 rows × 21 columns** — 14 original + 7 engineered).
 
-- Creating interaction features (e.g., rooms × location-related factors)  
-- Scaling or transforming skewed variables  
-- Exploring polynomial features if appropriate  
+Before engineering, all raw features were ranked by correlation with `medv` to identify the strongest candidates.
 
-Feature importance analysis will be used to understand which variables most strongly influence house prices.
+### Feature correlations with medv
+
+| Feature | Correlation | Notes |
+|---------|------------|-------|
+| `lstat` | −0.758 | Strongest predictor — poverty rate is a direct proxy for neighborhood desirability |
+| `rm` | +0.690 | More rooms = more space = higher value |
+| `indus` | −0.595 | Industrial land use reduces residential desirability |
+| `tax` | −0.562 | Higher taxes increase ownership cost |
+| `nox` | −0.517 | Air pollution proxy |
+| `ptratio` | −0.514 | School quality proxy |
+| `crim` | −0.506 | Crime directly reduces safety and desirability |
+| `age` | −0.485 | Older housing stock correlates with lower value |
+| `rad` | −0.462 | Higher highway exposure → more noise → lower value |
+| `zn` | +0.403 | More residential zoning → suburban, higher-value areas |
+| `dis` | +0.358 | Farther from industry → quieter, cleaner neighborhoods |
+| `chas` | +0.072 | Kept for EDA only — only 35 river-adjacent tracts |
+| `b` | — | **Excluded** — racially charged feature from 1978 |
+
+### Engineered features
+
+| Feature | Formula | Rationale |
+|---------|---------|-----------|
+| `CRIME_LOG` | `log(1 + crim)` | Crime is heavily right-skewed — log compresses the tail so a jump from 0.1 to 1.0 is treated the same as 1.0 to 10.0 |
+| `ROOM_SQ` | `rm²` | The value premium for extra rooms is non-linear — going from 6 to 7 rooms adds more value than 4 to 5 |
+| `TAX_PER_ROOM` | `tax / rm` | Ownership cost per unit of space — a high tax rate on a small home is a worse deal than the same rate on a large home |
+| `LSTAT_PER_ROOM` | `lstat / rm` | Poverty density relative to home size — combines the two strongest predictors |
+| `POLLUTION_PROXIMITY` | `nox / dis` | Pollution concentration per unit of distance from employment centers |
+| `SCHOOL_INDEX` | `ptratio × lstat` | School quality weighted by neighborhood poverty — bad schools in poor areas compound each other |
+| `AGE_DIST` | `age × dis` | Old housing stock that is also far from employment — the least desirable combination |
+
+All original columns are preserved so models have access to both raw and engineered features.
 
 ---
 
-## Modeling Approach (Preliminary)
+## Modeling Methods
 
-We plan to explore several regression models, including:
+Implemented in `src/train_model.py`. All models are trained on an **80/20 train/test split** (`random_state=42`). Linear models and KNN are wrapped in a `StandardScaler` pipeline; the Decision Tree operates on raw feature values.
 
-- Linear Regression (baseline)  
-- Ridge or Lasso Regression  
-- Random Forest Regressor  
-- Gradient Boosting Regressor  
+### Linear Regression (baseline)
+Fits a global hyperplane through all 21 features. No regularization. This is the simplest possible model and sets the performance floor.
 
-The final model selection may evolve as we analyze the data and learn additional methods during the course.
+### Ridge Regression
+Adds an L2 penalty to shrink correlated coefficients. Several Boston features are correlated (e.g. `tax` and `rad`, `nox` and `indus`), so Ridge is a natural second step.
 
----
+### Lasso Regression
+Adds an L1 penalty that forces some coefficients to exactly zero — implicit feature selection across 21 features. `alpha=0.1`, `max_iter=5000`.
 
-## Visualization Plan (Preliminary)
+### Decision Tree
+Splits on individual features recursively. Constrained to `max_depth=5`, `min_samples_leaf=5` to limit overfitting. Can capture non-linear relationships but suffers from high variance on small datasets.
 
-Visualizations will include:
+### KNN (k=10)
+Predicts by averaging the 10 most similar neighborhoods by Euclidean distance. No parametric assumptions — purely local similarity. `k=10` reduces the variance of single-neighbor predictions.
 
-- Distribution plots of housing prices  
-- Correlation heatmaps  
-- Scatter plots of key features vs. price  
-- Residual plots  
-- Feature importance plots  
-
-These visualizations will support interpretation of both the data and model performance.
+### K-Means clustering (exploration only)
+Groups Boston neighborhoods into 4 segments based on `rm` and `lstat`. Not used for prediction — reveals natural market tiers (wealthy suburbs vs inner-city tracts) in an unsupervised way.
 
 ---
 
-## Test Plan (Preliminary)
+## Results
 
-- Split dataset into training and testing sets (e.g., 80/20 split)  
-- Evaluate models using MAE, RMSE, and R²  
-- Compare baseline and more advanced models  
-- Analyze prediction errors and residual patterns  
+| Model | MAE | RMSE | R² | vs. Baseline (RMSE) |
+|-------|-----|------|----|---------------------|
+| **Linear Regression** | 2.30 | **2.95** | **0.844** | — baseline |
+| Ridge Regression | 2.37 | 3.00 | 0.839 | +0.05 |
+| Lasso Regression | 2.43 | 3.06 | 0.832 | +0.11 |
+| Decision Tree | 2.67 | 3.80 | 0.740 | +0.85 |
+| KNN (k=10) | **2.24** | 3.00 | 0.838 | +0.05 |
 
-## How to run the project 
-- make install
-- make clean
-- make run
+*All error values in $1,000s. Best per metric in bold.*
 
+### Best model: Linear Regression
 
-## Check-In nr. 1
-The main dataset used is the Ames Housing dataset from Kaggle, which contains detailed information about residential homes.
+**Linear Regression** achieved the lowest RMSE (2.95) and highest R² (0.844). Typical predictions are within **$2,300** of the true median neighborhood value.
 
-In addition, external Zillow data for Boston, MA was explored to provide real-world market context.
+**KNN had the lowest MAE (2.24)** — individual predictions are slightly closer on average — but it does not generalize as well overall (RMSE 3.00).
 
+### Why no model beat the linear baseline on RMSE
 
-## Project Structure 
+**Ridge and Lasso** scored slightly below Linear Regression. Regularization penalizes large coefficients to reduce overfitting, but with only 21 features and ~388 training rows there is not much overfitting to correct. The penalty ends up shrinking genuinely useful coefficients, slightly hurting performance.
 
-data/
-  raw/
-    train.csv
-    zillow.csv
-  processed/
-    train_clean.csv
-    train_features.csv
-    model_results.txt
+**Decision Tree** was the clear worst (RMSE 3.80, R² 0.740). A single tree makes locally optimal splits but misses the smooth global linear trend between `rm`, `lstat`, and `medv`. Deeper trees would overfit on only 388 training rows.
 
-src/
-  clean_data.py
-  features.py
-  train_model.py
-  zillow_analysis.py
-  main.py
+### What this tells us about the data
 
-## Main Script
-`main.py` is used for exploratory data analysis and visualization, including:
-- Scatter plots
-- Correlation heatmap
-- Boxplots
+The fact that the simplest model wins is the key finding: **Boston neighborhood prices have a largely linear relationship with the features.** Good feature engineering (`CRIME_LOG`, `ROOM_SQ`, `SCHOOL_INDEX`, etc.) allowed the linear model to capture non-linear patterns without requiring a non-linear model.
 
-## Data Processing
+---
 
-Steps Performed
-	1.	Loaded raw dataset from data/raw/train.csv
-	2.	Removed duplicate rows
-	3.	Dropped columns with many missing or low-value features:
-	•	PoolQC, Fence, MiscFeature, Alley, Utilities, LandSlope
-	4.	Handled missing values by filling with default values (e.g., 0)
-	5.	Removed outliers (e.g., very large houses with GrLivArea > 4000)
-	6.	Inspected data types (numeric vs categorical)
-	7.	Analyzed categorical features (number of unique values)
-	8.	Saved cleaned dataset to data/processed/train_clean.csv
+## Visualizations
 
-Purpose
+All plots are saved to `plots/` after running `make visualize` and `make train`.
 
-These steps ensure the dataset is clean, consistent, and ready for modeling.
+| File | Step | Description |
+|------|------|-------------|
+| `target_distribution.png` | EDA | Histogram of `medv` with mean and median lines |
+| `scatter_rm_vs_medv.png` | EDA | Rooms vs home value scatter with trend line (r = +0.69) |
+| `scatter_lstat_vs_medv.png` | EDA | Poverty rate vs home value scatter (r = −0.74) |
+| `boxplot_chas_vs_medv.png` | EDA | River-adjacent vs non-river-adjacent home values |
+| `correlation_heatmap.png` | EDA | Full feature correlation matrix |
+| `model_comparison.png` | Modeling | Bar chart comparing MAE, RMSE, and R² across all 5 models |
+| `actual_vs_predicted.png` | Modeling | Actual vs predicted home values (best model) |
+| `residual_plot.png` | Modeling | Prediction error vs predicted value (best model) |
+| `coefficient_plot.png` | Modeling | Linear Regression coefficients by feature (magnitude + direction) |
+| `decision_tree.png` | Modeling | Decision tree structure (top 2 levels) |
+| `kmeans_clusters.png` | Modeling | K-Means (k=4) Boston neighborhood segments |
+| `zillow_boston_trend.png` | Context | Boston median sale price trend over time (Zillow) |
 
-## Exploratory Data Analysis (EDA)
+### Key insights
 
-Several visualizations were created to understand relationships in the data:
-	•	Living Area vs Price
-Larger houses tend to have higher prices (positive relationship).
+- **Actual vs. Predicted:** Points cluster tightly along the 45° line. Slight underprediction at the high end — expected, since `medv==50` censoring means few high-value examples survived cleaning.
+- **Residuals:** Centered on zero with no clear pattern — no systematic bias.
+- **Coefficient plot:** `LSTAT_PER_ROOM`, `ROOM_SQ`, and `SCHOOL_INDEX` have the largest magnitudes, confirming that rooms and poverty rate are the dominant price drivers — and that the engineered features captured the non-linear signal.
+- **Decision Tree top splits:** First split on `rm`, second split on `lstat`, confirming these two features dominate.
+- **K-Means clusters:** Four clear market tiers — high-rooms/low-poverty (wealthy suburbs) vs low-rooms/high-poverty (inner-city tracts), with two mid-range segments.
+- **Zillow trend:** Boston median prices have risen from ~$380k (2010) to ~$750k (2022+), contextualizing how much the 1978 dataset understates current values.
 
-	•	House Quality vs Price
-Higher-quality houses have significantly higher prices.
+---
 
-	•	Correlation Matrix
-Strong predictors identified:
+## Limitations
 
-	•	OverallQual
-	•	GrLivArea
-	•	TotalBsmtSF
-	•	GarageArea
-	•	YearBuilt / YearRemodAdd
+- **1978 dollars:** All prices are in 1978 $1,000s and are not comparable to modern values. The Zillow trend plot provides modern context.
+- **`medv` ceiling:** The dataset caps home values at $50,000. After removing these 16 censored rows, expensive neighborhoods are underrepresented — all models will underpredict high-value areas.
+- **`b` column excluded:** The original dataset includes a racially charged feature (`b`) derived from the 1978 paper. It is excluded from all modeling and is not an appropriate variable for any modern application.
+- **Small dataset:** 485 rows limits how well complex models can generalize. Random Forest, Gradient Boosting, or neural networks would need significantly more data to outperform the linear baseline here.
+- **KNN and dimensionality:** KNN degrades as the number of features grows (curse of dimensionality). With 21 features it performs well, but adding more features would require PCA or feature selection first.
+- **Geographic granularity:** The dataset describes census tracts — individual properties within a tract can vary significantly from the tract median.
 
-These insights guided feature selection for modeling.
+---
 
-Data Modeling
+## How to Contribute
 
-## Models Used
-	•	Linear Regression (baseline model)
-Captures overall relationships between features and price.
+1. Fork the repository and create a feature branch.
+2. Install dependencies: `make install`
+3. Make your changes and ensure all tests pass: `make test`
+4. Submit a pull request with a clear description of the change.
 
-	•	K-Nearest Neighbors (KNN)
-Predicts house prices based on similar houses using distance metrics.
+The test suite covers the two most critical pipeline steps — data cleaning and feature engineering. Any new transformation should have a corresponding test in `src/tests/test_project.py`.
 
-	•	K-Means Clustering
-Groups similar houses to identify patterns in the data (used for exploration, not prediction).
+---
 
-## Distance Metrics
-	•	Euclidean Distance
-	•	Manhattan Distance
+## Environment
 
-These are used in KNN to measure similarity between houses.
+- **Language:** Python 3.9+
+- **Platform:** macOS, Linux, Windows (WSL recommended)
+- **Key libraries:** pandas, numpy, scikit-learn, matplotlib, statsmodels, pytest
 
-## Preprocessing for Modeling
-	•	Missing values handled using imputation
-	•	Categorical features encoded using OneHotEncoder
-	•	Features scaled using StandardScaler (important for KNN and clustering)
+Install all dependencies:
 
-  Evaluation Metrics
+```bash
+pip install -r requirements.txt
+```
 
-## Models are evaluated using:
-	•	MAE (Mean Absolute Error)
-	•	RMSE (Root Mean Squared Error)
-	•	R² Score
-
-  ## Preliminary Results
-	•	Models are able to capture general trends in the data
-	•	Larger and higher-quality houses tend to have higher predicted prices
-	•	KNN predicts based on similarity, while Linear Regression captures global patterns
-	•	Predictions are not fully accurate yet
-
-## Next Improvements
-	•	Feature selection (use most important variables)
-	•	Hyperparameter tuning (e.g., number of neighbors in KNN)
-	•	Further model optimization
-
-## Zillow Data Integration
-In addition to the Ames dataset, Zillow data for Boston, MA was explored.
-	•	The data was originally in wide format and reshaped into long format
-	•	Used to analyze monthly housing price trends in Boston
-
-In the future: 
-	•	Integrate Zillow data into the modeling pipeline
-	•	Use it to improve prediction accuracy and real-world relevance
-
-
+| Package | Purpose |
+|---------|---------|
+| `pandas` | Data loading, cleaning, manipulation |
+| `numpy` | Numerical operations and feature transforms |
+| `scikit-learn` | Models, pipelines, scaling, metrics |
+| `matplotlib` | All visualizations |
+| `statsmodels` | Boston Housing Dataset download |
+| `pytest` | Unit test framework |

@@ -1,22 +1,28 @@
-Decision Tree Regression Results
+Boston Housing Price Prediction — Model Results
+============================================================
 
-Dataset shape: (1456, 81)
-Training set shape: (1164, 278)
-Test set shape: (292, 278)
+Dataset shape: (485, 21)
+Training set: (388, 20)   Test set: (97, 20)
 
-MAE: 24483.99
-RMSE: 35553.80
-R^2: 0.7592
+Story: linear baseline → regularization → non-linear → distance-based
+------------------------------------------------------------
+Linear Regression          MAE=  2.30  RMSE=  2.95  R²=0.8438
+  → Baseline. Fits a global plane through all features. No regularization.
 
-Top 10 Feature Importances
-       Feature  Importance
-   OverallQual    0.554031
-       TotalSF    0.332570
-TotalBathrooms    0.036692
-  TotRmsAbvGrd    0.023129
-    BsmtFinSF1    0.009165
-KitchenQual_Gd    0.008802
-    GarageCars    0.008460
-      2ndFlrSF    0.006864
-     GrLivArea    0.003708
-HouseAgeAtSale    0.003151
+Ridge Regression           MAE=  2.37  RMSE=  3.00  R²=0.8387
+  → Adds L2 penalty — shrinks correlated coefficients, reduces overfitting.
+
+Lasso Regression           MAE=  2.43  RMSE=  3.06  R²=0.8324
+  → Adds L1 penalty — forces some coefficients to zero (implicit feature selection).
+
+Decision Tree              MAE=  2.67  RMSE=  3.80  R²=0.7402
+  → Splits on single features. Captures non-linearity but high variance.
+
+KNN (k=10)                 MAE=  2.24  RMSE=  3.00  R²=0.8383
+  → Predicts from the 10 nearest neighborhoods by Euclidean distance.
+
+------------------------------------------------------------
+Best model (lowest RMSE): Linear Regression
+  MAE:  2.30
+  RMSE: 2.95
+  R²:   0.8438

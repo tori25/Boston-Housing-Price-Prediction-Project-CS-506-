@@ -1,0 +1,23 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# pytest cache
+.pytest_cache/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
