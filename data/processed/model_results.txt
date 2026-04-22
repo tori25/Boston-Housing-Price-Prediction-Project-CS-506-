@@ -1,28 +1,28 @@
 Boston Housing Price Prediction — Model Results
 ============================================================
 
-Dataset shape: (485, 21)
-Training set: (388, 20)   Test set: (97, 20)
+Dataset shape: (485, 20)
+Training set: (388, 19)   Test set: (97, 19)
 
 Story: linear baseline → regularization → non-linear → distance-based
 ------------------------------------------------------------
-Linear Regression          MAE=  2.30  RMSE=  2.95  R²=0.8438
+Linear Regression          MAE=  2.27  RMSE=  2.92  R²=0.8469
   → Baseline. Fits a global plane through all features. No regularization.
 
-Ridge Regression           MAE=  2.37  RMSE=  3.00  R²=0.8387
+Ridge Regression           MAE=  2.34  RMSE=  3.01  R²=0.8373
   → Adds L2 penalty — shrinks correlated coefficients, reduces overfitting.
 
-Lasso Regression           MAE=  2.43  RMSE=  3.06  R²=0.8324
+Lasso Regression           MAE=  2.40  RMSE=  3.07  R²=0.8311
   → Adds L1 penalty — forces some coefficients to zero (implicit feature selection).
 
-Decision Tree              MAE=  2.67  RMSE=  3.80  R²=0.7402
+Decision Tree              MAE=  2.55  RMSE=  3.53  R²=0.7766
   → Splits on single features. Captures non-linearity but high variance.
 
-KNN (k=10)                 MAE=  2.24  RMSE=  3.00  R²=0.8383
+KNN (k=10)                 MAE=  2.28  RMSE=  3.07  R²=0.8304
   → Predicts from the 10 nearest neighborhoods by Euclidean distance.
 
 ------------------------------------------------------------
 Best model (lowest RMSE): Linear Regression
-  MAE:  2.30
-  RMSE: 2.95
-  R²:   0.8438
+  MAE:  2.27
+  RMSE: 2.92
+  R²:   0.8469

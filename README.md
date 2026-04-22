@@ -53,7 +53,8 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 19 tests autom
 │   └── processed/
 │       ├── boston_clean.csv        # Cleaned dataset
 │       ├── train_features.csv      # Dataset with engineered features
-│       └── model_results.txt       # Model comparison output
+│       ├── model_results.txt       # Model comparison output
+│       └── data_inspection.txt     # Raw data inspection report
 ├── src/
 │   ├── collect_data.py             # Downloads Boston Housing Dataset
 │   ├── clean_data.py               # Data cleaning pipeline
@@ -79,7 +80,7 @@ The dataset contains 13 features including crime rate, number of rooms, property
 
 Performance is measured with **MAE**, **RMSE**, and **R²**.
 
-As supplemental real-world context, Zillow median sale price data for Boston, MA is also collected and visualized to show how the market has evolved since the original 1978 dataset.
+As supplemental real-world context, Zillow median sale price data for Boston, MA is also visualized to show how the market has evolved since the original 1978 dataset.
 
 ---
 
@@ -102,11 +103,11 @@ Implemented in `src/collect_data.py`.
 | `rad` | Accessibility index to radial highways |
 | `tax` | Property tax rate per $10,000 |
 | `ptratio` | Pupil-teacher ratio by town |
-| `b` | Racial composition index |
+| `black` | Racial composition index — **dropped in cleaning** |
 | `lstat` | % lower-status population |
 | `medv` | **Target** — Median home value in $1,000s |
 
-**Secondary dataset:** Zillow Research Data — Median Sale Price by Metro Area. Used for a trend visualization showing the Boston real estate market from 2010 to present.
+**Secondary dataset:** Zillow Research Data — Median Sale Price by Metro Area (2018–2026). Used for a trend visualization showing how the Boston real estate market has evolved since the original 1978 dataset.
 
 The `collect_data.py` script also produces `data/processed/data_inspection.txt` with a full summary of the raw data: shape, dtypes, missing values, and descriptive statistics.
 
@@ -114,33 +115,37 @@ The `collect_data.py` script also produces `data/processed/data_inspection.txt` 
 
 ## Data Cleaning
 
-Implemented in `src/clean_data.py`. Final cleaned dataset: **485 rows × 14 columns**, zero missing values.
+Implemented in `src/clean_data.py`. Final cleaned dataset: **485 rows × 13 columns**, zero missing values. The `black` column is dropped here before any modeling.
 
 ### Step 1 — Drop duplicate rows
 **What:** Remove any rows that appear more than once.
 **Why:** Duplicates cause the model to see the same observation multiple times during training, artificially inflating confidence in those data points.
 
-### Step 2 — Remove irrelevant ID columns
+### Step 2 — Drop ethically problematic column
+**What:** Drop `black` unconditionally.
+**Why:** Racially charged feature from the 1978 paper — not an appropriate predictor in any modern application. Flagged in Check-In 1.
+
+### Step 3 — Remove irrelevant ID columns
 **What:** Drop any column named `id` or `unnamed: 0` (index columns accidentally saved to CSV).
 **Why:** ID columns are arbitrary identifiers with no relationship to home value.
 
-### Step 3 — Fix data types
+### Step 4 — Fix data types
 **What:** Cast `chas`, `rad`, and `tax` to `int`.
 **Why:** These columns were loaded as `float64` by pandas but are conceptually integers — `chas` is a 0/1 dummy, `rad` is an ordinal index 1–24, `tax` is a whole-number rate. Correct types prevent floating-point noise in distance calculations (KNN).
 
-### Step 4 — Handle missing values
+### Step 5 — Handle missing values
 **What:** Detect columns with missing values and fill with the column median.
 **Why:** The classic Boston dataset has no missing values, but the check is explicit so the script is safe if the source data changes. Median imputation preserves the distribution better than mean imputation when outliers are present.
 
-### Step 5 — Remove censored values
+### Step 6 — Remove censored values
 **What:** Remove all rows where `medv == 50`.
 **Why:** The original dataset artificially caps home values at $50,000. These 16 rows are not real observations — they represent homes worth *at least* $50k but recorded as exactly $50k. Keeping them teaches the model a false ceiling, causing it to systematically underpredict expensive neighborhoods.
 
-### Step 6 — Remove rows with negative feature values
+### Step 7 — Remove rows with negative feature values
 **What:** Drop any row where a non-target numeric feature is negative.
 **Why:** All Boston Housing features (crime rate, rooms, distance, etc.) are physically non-negative. A negative value indicates a data entry error.
 
-### Step 7 — Remove extreme outliers (crime rate)
+### Step 8 — Remove extreme outliers (crime rate)
 **What:** Remove rows in the top 1% of `crim`, dropping 5 rows.
 **Why:** A small number of Boston tracts have crime rates orders of magnitude above the rest. These extreme values distort Euclidean distances in KNN and skew linear model coefficients. Log-transforming `crim` in feature engineering further tames this distribution.
 
@@ -148,7 +153,7 @@ Implemented in `src/clean_data.py`. Final cleaned dataset: **485 rows × 14 colu
 
 ## Feature Extraction
 
-Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**485 rows × 21 columns** — 14 original + 7 engineered).
+Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**485 rows × 20 columns** — 13 original + 7 engineered).
 
 Before engineering, all raw features were ranked by correlation with `medv` to identify the strongest candidates.
 
@@ -167,8 +172,8 @@ Before engineering, all raw features were ranked by correlation with `medv` to i
 | `rad` | −0.462 | Higher highway exposure → more noise → lower value |
 | `zn` | +0.403 | More residential zoning → suburban, higher-value areas |
 | `dis` | +0.358 | Farther from industry → quieter, cleaner neighborhoods |
-| `chas` | +0.072 | Kept for EDA only — only 35 river-adjacent tracts |
-| `b` | — | **Excluded** — racially charged feature from 1978 |
+| `chas` | +0.072 | Kept for EDA only — only 29 river-adjacent tracts after cleaning |
+| `black` | — | **Dropped in cleaning** — racially charged feature, not an appropriate predictor |
 
 ### Engineered features
 
@@ -191,13 +196,13 @@ All original columns are preserved so models have access to both raw and enginee
 Implemented in `src/train_model.py`. All models are trained on an **80/20 train/test split** (`random_state=42`). Linear models and KNN are wrapped in a `StandardScaler` pipeline; the Decision Tree operates on raw feature values.
 
 ### Linear Regression (baseline)
-Fits a global hyperplane through all 21 features. No regularization. This is the simplest possible model and sets the performance floor.
+Fits a global hyperplane through all 20 features. No regularization. This is the simplest possible model and sets the performance floor.
 
 ### Ridge Regression
 Adds an L2 penalty to shrink correlated coefficients. Several Boston features are correlated (e.g. `tax` and `rad`, `nox` and `indus`), so Ridge is a natural second step.
 
 ### Lasso Regression
-Adds an L1 penalty that forces some coefficients to exactly zero — implicit feature selection across 21 features. `alpha=0.1`, `max_iter=5000`.
+Adds an L1 penalty that forces some coefficients to exactly zero — implicit feature selection across 20 features. `alpha=0.1`, `max_iter=5000`.
 
 ### Decision Tree
 Splits on individual features recursively. Constrained to `max_depth=5`, `min_samples_leaf=5` to limit overfitting. Can capture non-linear relationships but suffers from high variance on small datasets.
@@ -214,25 +219,23 @@ Groups Boston neighborhoods into 4 segments based on `rm` and `lstat`. Not used 
 
 | Model | MAE | RMSE | R² | vs. Baseline (RMSE) |
 |-------|-----|------|----|---------------------|
-| **Linear Regression** | 2.30 | **2.95** | **0.844** | — baseline |
-| Ridge Regression | 2.37 | 3.00 | 0.839 | +0.05 |
-| Lasso Regression | 2.43 | 3.06 | 0.832 | +0.11 |
-| Decision Tree | 2.67 | 3.80 | 0.740 | +0.85 |
-| KNN (k=10) | **2.24** | 3.00 | 0.838 | +0.05 |
+| **Linear Regression** | **2.27** | **2.92** | **0.847** | — baseline |
+| Ridge Regression | 2.34 | 3.01 | 0.837 | +0.09 |
+| Lasso Regression | 2.40 | 3.07 | 0.831 | +0.15 |
+| Decision Tree | 2.55 | 3.53 | 0.777 | +0.61 |
+| KNN (k=10) | 2.28 | 3.07 | 0.830 | +0.15 |
 
 *All error values in $1,000s. Best per metric in bold.*
 
 ### Best model: Linear Regression
 
-**Linear Regression** achieved the lowest RMSE (2.95) and highest R² (0.844). Typical predictions are within **$2,300** of the true median neighborhood value.
-
-**KNN had the lowest MAE (2.24)** — individual predictions are slightly closer on average — but it does not generalize as well overall (RMSE 3.00).
+**Linear Regression** achieved the best result on all three metrics — lowest RMSE (2.92), lowest MAE (2.27), and highest R² (0.847). Typical predictions are within **$2,270** of the true median neighborhood value.
 
 ### Why no model beat the linear baseline on RMSE
 
-**Ridge and Lasso** scored slightly below Linear Regression. Regularization penalizes large coefficients to reduce overfitting, but with only 21 features and ~388 training rows there is not much overfitting to correct. The penalty ends up shrinking genuinely useful coefficients, slightly hurting performance.
+**Ridge and Lasso** scored slightly below Linear Regression. Regularization penalizes large coefficients to reduce overfitting, but with only 20 features and ~388 training rows there is not much overfitting to correct. The penalty ends up shrinking genuinely useful coefficients, slightly hurting performance.
 
-**Decision Tree** was the clear worst (RMSE 3.80, R² 0.740). A single tree makes locally optimal splits but misses the smooth global linear trend between `rm`, `lstat`, and `medv`. Deeper trees would overfit on only 388 training rows.
+**Decision Tree** was the clear worst (RMSE 3.53, R² 0.777). A single tree makes locally optimal splits but misses the smooth global linear trend between `rm`, `lstat`, and `medv`. Deeper trees would overfit on only 388 training rows.
 
 ### What this tells us about the data
 
@@ -248,7 +251,7 @@ All plots are saved to `plots/` after running `make visualize` and `make train`.
 |------|------|-------------|
 | `target_distribution.png` | EDA | Histogram of `medv` with mean and median lines |
 | `scatter_rm_vs_medv.png` | EDA | Rooms vs home value scatter with trend line (r = +0.69) |
-| `scatter_lstat_vs_medv.png` | EDA | Poverty rate vs home value scatter (r = −0.74) |
+| `scatter_lstat_vs_medv.png` | EDA | Poverty rate vs home value scatter (r = −0.76) |
 | `boxplot_chas_vs_medv.png` | EDA | River-adjacent vs non-river-adjacent home values |
 | `correlation_heatmap.png` | EDA | Full feature correlation matrix |
 | `model_comparison.png` | Modeling | Bar chart comparing MAE, RMSE, and R² across all 5 models |
@@ -263,10 +266,10 @@ All plots are saved to `plots/` after running `make visualize` and `make train`.
 
 - **Actual vs. Predicted:** Points cluster tightly along the 45° line. Slight underprediction at the high end — expected, since `medv==50` censoring means few high-value examples survived cleaning.
 - **Residuals:** Centered on zero with no clear pattern — no systematic bias.
-- **Coefficient plot:** `LSTAT_PER_ROOM`, `ROOM_SQ`, and `SCHOOL_INDEX` have the largest magnitudes, confirming that rooms and poverty rate are the dominant price drivers — and that the engineered features captured the non-linear signal.
-- **Decision Tree top splits:** First split on `rm`, second split on `lstat`, confirming these two features dominate.
+- **Coefficient plot:** `LSTAT_PER_ROOM`, `ROOM_SQ`, and `SCHOOL_INDEX` have the largest magnitudes, confirming that rooms and poverty rate are the dominant price drivers.
+- **Decision Tree top splits:** First split on `SCHOOL_INDEX`, second split on `rm` — confirming that the engineered features captured meaningful signal.
 - **K-Means clusters:** Four clear market tiers — high-rooms/low-poverty (wealthy suburbs) vs low-rooms/high-poverty (inner-city tracts), with two mid-range segments.
-- **Zillow trend:** Boston median prices have risen from ~$380k (2010) to ~$750k (2022+), contextualizing how much the 1978 dataset understates current values.
+- **Zillow trend:** Boston median prices rose from ~$489k (2018) to ~$820k (peak 2025), contextualizing how much the 1978 dataset understates current values.
 
 ---
 
@@ -274,21 +277,10 @@ All plots are saved to `plots/` after running `make visualize` and `make train`.
 
 - **1978 dollars:** All prices are in 1978 $1,000s and are not comparable to modern values. The Zillow trend plot provides modern context.
 - **`medv` ceiling:** The dataset caps home values at $50,000. After removing these 16 censored rows, expensive neighborhoods are underrepresented — all models will underpredict high-value areas.
-- **`b` column excluded:** The original dataset includes a racially charged feature (`b`) derived from the 1978 paper. It is excluded from all modeling and is not an appropriate variable for any modern application.
+- **`black` column excluded:** The original dataset includes a racially charged feature derived from the 1978 paper. It is dropped in the cleaning step and is not an appropriate variable for any modern application.
 - **Small dataset:** 485 rows limits how well complex models can generalize. Random Forest, Gradient Boosting, or neural networks would need significantly more data to outperform the linear baseline here.
-- **KNN and dimensionality:** KNN degrades as the number of features grows (curse of dimensionality). With 21 features it performs well, but adding more features would require PCA or feature selection first.
+- **KNN and dimensionality:** KNN degrades as the number of features grows (curse of dimensionality). With 20 features it performs well, but adding more features would require PCA or feature selection first.
 - **Geographic granularity:** The dataset describes census tracts — individual properties within a tract can vary significantly from the tract median.
-
----
-
-## How to Contribute
-
-1. Fork the repository and create a feature branch.
-2. Install dependencies: `make install`
-3. Make your changes and ensure all tests pass: `make test`
-4. Submit a pull request with a clear description of the change.
-
-The test suite covers the two most critical pipeline steps — data cleaning and feature engineering. Any new transformation should have a corresponding test in `src/tests/test_project.py`.
 
 ---
 
@@ -296,13 +288,6 @@ The test suite covers the two most critical pipeline steps — data cleaning and
 
 - **Language:** Python 3.9+
 - **Platform:** macOS, Linux, Windows (WSL recommended)
-- **Key libraries:** pandas, numpy, scikit-learn, matplotlib, statsmodels, pytest
-
-Install all dependencies:
-
-```bash
-pip install -r requirements.txt
-```
 
 | Package | Purpose |
 |---------|---------|
@@ -312,3 +297,7 @@ pip install -r requirements.txt
 | `matplotlib` | All visualizations |
 | `statsmodels` | Boston Housing Dataset download |
 | `pytest` | Unit test framework |
+
+```bash
+pip install -r requirements.txt
+```

@@ -1,8 +1,7 @@
 import os
 import pandas as pd
-import numpy as np
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg")  # non-interactive backend — must be set before importing pyplot
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
@@ -38,18 +37,16 @@ def main():
     if TARGET_COLUMN not in df.columns:
         raise ValueError(f"Target column '{TARGET_COLUMN}' not found in dataset.")
 
-    # All features are numeric — no one-hot encoding needed
     X = df.drop(columns=[TARGET_COLUMN])
     y = df[TARGET_COLUMN]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
-
     print(f"Training set shape: {X_train.shape}")
     print(f"Test set shape:     {X_test.shape}")
 
-    # ── Define models (story order) ───────────────────────────────────────────
+    # Story order: linear baseline → regularized → non-linear → distance-based
     models = {
         "Linear Regression": Pipeline([
             ("scaler", StandardScaler()),
@@ -72,7 +69,6 @@ def main():
         ]),
     }
 
-    # ── Train and evaluate ────────────────────────────────────────────────────
     results = []
     predictions = {}
 
@@ -87,7 +83,6 @@ def main():
     results_df = pd.DataFrame(results)
     best = results_df.sort_values("RMSE").iloc[0]
 
-    # ── Save results ──────────────────────────────────────────────────────────
     interpretations = {
         "Linear Regression": "Baseline. Fits a global plane through all features. No regularization.",
         "Ridge Regression":  "Adds L2 penalty — shrinks correlated coefficients, reduces overfitting.",
@@ -123,14 +118,12 @@ def main():
     ]
 
     report = "\n".join(report_lines) + "\n"
-
     with open(MODEL_RESULTS_PATH, "w", encoding="utf-8") as f:
         f.write(report)
-
     print("\n" + report)
     print(f"Results saved to: {MODEL_RESULTS_PATH}")
 
-    # ── Plot 1: Model comparison (story order) ────────────────────────────────
+    # blue = linear models, red = Decision Tree, green = KNN
     colors = ["#4878CF", "#4878CF", "#4878CF", "#D65F5F", "#6ACC65"]
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     for ax, metric in zip(axes, ["MAE", "RMSE", "R²"]):
@@ -143,7 +136,6 @@ def main():
     plt.savefig(f"{PLOTS_DIR}/model_comparison.png", dpi=100)
     plt.close()
 
-    # ── Plot 2: Actual vs Predicted (best model) ──────────────────────────────
     best_name = best["Model"]
     best_preds = predictions[best_name]
 
@@ -159,7 +151,6 @@ def main():
     plt.savefig(f"{PLOTS_DIR}/actual_vs_predicted.png", dpi=100)
     plt.close()
 
-    # ── Plot 3: Residuals (best model) ────────────────────────────────────────
     residuals = y_test - best_preds
     plt.figure(figsize=(8, 6))
     plt.scatter(best_preds, residuals, alpha=0.6)
@@ -171,25 +162,16 @@ def main():
     plt.savefig(f"{PLOTS_DIR}/residual_plot.png", dpi=100)
     plt.close()
 
-    # ── Plot 4: Decision Tree structure ──────────────────────────────────────
     dt_model = models["Decision Tree"]
     plt.figure(figsize=(20, 10))
-    plot_tree(
-        dt_model,
-        feature_names=X.columns,
-        filled=True,
-        rounded=True,
-        fontsize=8,
-        max_depth=2
-    )
+    plot_tree(dt_model, feature_names=X.columns, filled=True, rounded=True, fontsize=8, max_depth=2)
     plt.title("Decision Tree Visualization (Top Levels)")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/decision_tree.png", dpi=100)
     plt.close()
 
-    # ── K-Means Clustering (exploration, not prediction) ─────────────────────
-    # rm (rooms) and lstat (% lower status) are the two strongest price drivers
-    cluster_features = ["rm", "lstat"]
+    # K-Means: exploration only — segments neighborhoods, not used for prediction
+    cluster_features = ["rm", "lstat"]  # two strongest predictors
     df_cluster = df[cluster_features + [TARGET_COLUMN]].dropna().copy()
 
     scaler = StandardScaler()
@@ -198,36 +180,34 @@ def main():
     kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
     df_cluster["Cluster"] = kmeans.fit_predict(X_cluster)
 
+    cluster_colors = ["#D65F5F", "#4878CF", "#6ACC65", "#E8A838"]
     fig, ax = plt.subplots(figsize=(9, 6))
-    scatter = ax.scatter(
-        df_cluster["rm"],
-        df_cluster[TARGET_COLUMN],
-        c=df_cluster["Cluster"],
-        cmap="Set1",
-        alpha=0.6,
-        s=30,
-    )
+    for cluster_id in range(4):
+        mask = df_cluster["Cluster"] == cluster_id
+        ax.scatter(
+            df_cluster.loc[mask, "rm"],
+            df_cluster.loc[mask, TARGET_COLUMN],
+            c=cluster_colors[cluster_id],
+            label=f"Cluster {cluster_id}",
+            alpha=0.6,
+            s=30,
+        )
     ax.set_xlabel("Average Rooms per Dwelling (rm)")
     ax.set_ylabel("Median Home Value ($1000s)")
     ax.set_title("K-Means Clustering (k=4): Boston Neighborhood Segments")
-    plt.colorbar(scatter, ax=ax, label="Cluster")
+    ax.legend(title="Cluster")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/kmeans_clusters.png", dpi=100)
     plt.close()
-
     print("K-Means cluster plot saved.")
 
-    # ── Plot 6: Coefficient plot (Linear Regression) ─────────────────────────
     lr_pipeline = models["Linear Regression"]
     lr_coefs = lr_pipeline.named_steps["model"].coef_
-    feature_names = X.columns.tolist()
-
-    coef_df = pd.DataFrame({"Feature": feature_names, "Coefficient": lr_coefs})
+    coef_df = pd.DataFrame({"Feature": X.columns.tolist(), "Coefficient": lr_coefs})
     coef_df["AbsCoef"] = coef_df["Coefficient"].abs()
-    coef_df = coef_df.sort_values("AbsCoef", ascending=True)
+    coef_df = coef_df.sort_values("AbsCoef", ascending=True)  # sorted by magnitude for readability
 
     colors_coef = ["#D65F5F" if c < 0 else "#4878CF" for c in coef_df["Coefficient"]]
-
     fig, ax = plt.subplots(figsize=(9, 7))
     ax.barh(coef_df["Feature"], coef_df["Coefficient"], color=colors_coef)
     ax.axvline(x=0, color="black", linewidth=0.8)

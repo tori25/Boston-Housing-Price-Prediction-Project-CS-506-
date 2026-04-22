@@ -56,7 +56,7 @@ Column notes:
   Target column : medv
     → Median home value in $1,000s. This is what we predict.
 
-  Numeric columns (14):
+  Numeric columns used in modeling (12):
     crim
     zn
     indus
@@ -68,9 +68,7 @@ Column notes:
     rad
     tax
     ptratio
-    black
     lstat
-    medv
 
   Categorical columns: None
     → All features are numeric. No one-hot encoding needed.

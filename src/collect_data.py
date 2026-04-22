@@ -7,14 +7,8 @@ INSPECTION_PATH = "data/processed/data_inspection.txt"
 
 
 def inspect_raw_data(df: pd.DataFrame) -> str:
-    """
-    Inspect raw data before any cleaning.
-    Prints and returns a report covering shape, columns, dtypes,
-    missing values, summary stats, and column classification notes.
-    """
     lines = []
 
-    # ── Shape ─────────────────────────────────────────────────────────────────
     lines += [
         "=" * 60,
         "RAW DATA INSPECTION",
@@ -22,22 +16,15 @@ def inspect_raw_data(df: pd.DataFrame) -> str:
         "",
         f"Shape: {df.shape[0]} rows × {df.shape[1]} columns",
         "",
-    ]
-
-    # ── Columns ───────────────────────────────────────────────────────────────
-    lines += [
         "Columns:",
         *[f"  {col}" for col in df.columns],
         "",
+        "Data types:",
     ]
-
-    # ── Data types ────────────────────────────────────────────────────────────
-    lines += ["Data types:"]
     for col, dtype in df.dtypes.items():
         lines.append(f"  {col:12s}  {dtype}")
     lines.append("")
 
-    # ── Missing values ────────────────────────────────────────────────────────
     missing = df.isnull().sum()
     total_missing = missing.sum()
     lines += [f"Missing values (total: {total_missing}):"]
@@ -49,22 +36,16 @@ def inspect_raw_data(df: pd.DataFrame) -> str:
             lines.append(f"  {col:12s}  {n} ({pct:.1f}%)")
     lines.append("")
 
-    # ── Summary statistics ────────────────────────────────────────────────────
-    lines += [
-        "Summary statistics:",
-        df.describe().to_string(),
-        "",
-    ]
+    lines += ["Summary statistics:", df.describe().to_string(), ""]
 
-    # ── Column classification notes ───────────────────────────────────────────
     target_col = "medv"
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
     categorical_cols = df.select_dtypes(include="object").columns.tolist()
 
-    # Columns considered unusable or ethically problematic
     unusable_cols = {
         "black": "Racially charged feature from the 1978 paper — dropped in modern applications.",
     }
+    usable_numeric = [c for c in numeric_cols if c not in unusable_cols and c != target_col]
 
     lines += [
         "-" * 60,
@@ -73,8 +54,8 @@ def inspect_raw_data(df: pd.DataFrame) -> str:
         f"  Target column : {target_col}",
         f"    → Median home value in $1,000s. This is what we predict.",
         "",
-        f"  Numeric columns ({len(numeric_cols)}):",
-        *[f"    {col}" for col in numeric_cols],
+        f"  Numeric columns used in modeling ({len(usable_numeric)}):",
+        *[f"    {col}" for col in usable_numeric],
         "",
     ]
 
@@ -102,11 +83,7 @@ def inspect_raw_data(df: pd.DataFrame) -> str:
 
 
 def collect_data():
-    """
-    Download the Boston Housing Dataset via statsmodels (Harrison & Rubinfeld, 1978).
-    Inspects raw data before saving to data/raw/boston.csv.
-    Saves inspection notes to data/processed/data_inspection.txt.
-    """
+    # Required on macOS — statsmodels download fails SSL verification without this
     ssl._create_default_https_context = ssl._create_unverified_context
 
     import statsmodels.api as sm
@@ -114,16 +91,13 @@ def collect_data():
     print("Downloading Boston Housing Dataset via statsmodels...")
     boston = sm.datasets.get_rdataset("Boston", "MASS").data
 
-    # Inspect before saving anything
     report = inspect_raw_data(boston)
 
-    # Save inspection notes
     os.makedirs("data/processed", exist_ok=True)
     with open(INSPECTION_PATH, "w", encoding="utf-8") as f:
         f.write(report)
     print(f"Inspection notes saved to: {INSPECTION_PATH}")
 
-    # Save raw data
     os.makedirs("data/raw", exist_ok=True)
     boston.to_csv(RAW_DATA_PATH, index=False)
     print(f"Raw dataset saved to: {RAW_DATA_PATH}")

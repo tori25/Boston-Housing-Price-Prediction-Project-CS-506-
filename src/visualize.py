@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg")  # non-interactive backend — must be set before importing pyplot
 import matplotlib.pyplot as plt
 
 INPUT_PATH = "data/processed/boston_clean.csv"
@@ -15,9 +15,6 @@ def main():
     df = pd.read_csv(INPUT_PATH)
     print(f"Loaded cleaned dataset: {df.shape}")
 
-    # ── Plot 1: Target distribution ───────────────────────────────────────────
-    # Claim: medv is approximately normally distributed after removing the
-    # $50k censored cap, with a slight right skew toward higher-value neighborhoods.
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.hist(df["medv"], bins=30, edgecolor="black", color="#4878CF", alpha=0.8)
     ax.axvline(df["medv"].mean(), color="red", linestyle="--", linewidth=1.5,
@@ -33,9 +30,6 @@ def main():
     plt.close()
     print("Saved: target_distribution.png")
 
-    # ── Plot 2: Scatter — rm vs medv ──────────────────────────────────────────
-    # Claim: More rooms strongly predicts higher home value.
-    # rm is the single strongest positive predictor (correlation ~0.70).
     corr_rm = df["rm"].corr(df["medv"])
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.scatter(df["rm"], df["medv"], alpha=0.5, s=20, color="#4878CF")
@@ -51,9 +45,6 @@ def main():
     plt.close()
     print("Saved: scatter_rm_vs_medv.png")
 
-    # ── Plot 3: Scatter — lstat vs medv ──────────────────────────────────────
-    # Claim: Higher % lower-status population strongly predicts lower home value.
-    # lstat is the strongest negative predictor (correlation ~-0.74).
     corr_lstat = df["lstat"].corr(df["medv"])
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.scatter(df["lstat"], df["medv"], alpha=0.5, s=20, color="#D65F5F")
@@ -69,9 +60,6 @@ def main():
     plt.close()
     print("Saved: scatter_lstat_vs_medv.png")
 
-    # ── Plot 4: Boxplot — chas vs medv ────────────────────────────────────────
-    # Claim: Neighborhoods bordering the Charles River (chas=1) have higher
-    # median home values than those that don't (chas=0).
     chas_0 = df[df["chas"] == 0]["medv"]
     chas_1 = df[df["chas"] == 1]["medv"]
     median_0 = chas_0.median()
@@ -98,9 +86,6 @@ def main():
     plt.close()
     print("Saved: boxplot_chas_vs_medv.png")
 
-    # ── Plot 5: Correlation heatmap ───────────────────────────────────────────
-    # Claim: rm and lstat are the strongest predictors of medv.
-    # nox, ptratio, and indus also show notable negative correlation.
     corr = df.corr()
     fig, ax = plt.subplots(figsize=(10, 8))
     im = ax.imshow(corr, cmap="coolwarm", vmin=-1, vmax=1)
@@ -109,21 +94,20 @@ def main():
     ax.set_yticks(range(len(corr.columns)))
     ax.set_xticklabels(corr.columns, rotation=45, ha="right")
     ax.set_yticklabels(corr.columns)
-    # Annotate each cell with the correlation value
     for i in range(len(corr.columns)):
         for j in range(len(corr.columns)):
             ax.text(j, i, f"{corr.iloc[i, j]:.2f}",
                     ha="center", va="center", fontsize=7,
-                    color="white" if abs(corr.iloc[i, j]) > 0.6 else "black")
+                    color="white" if abs(corr.iloc[i, j]) > 0.6 else "black")  # white text on dark cells
     ax.set_title("Feature Correlation Heatmap")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/correlation_heatmap.png", dpi=100)
     plt.close()
     print("Saved: correlation_heatmap.png")
 
-    # ── Feature correlations with target ─────────────────────────────────────
+    # reuse corr already computed above
     print("\nFeature correlations with medv (sorted):")
-    corr_target = df.corr()["medv"].drop("medv").sort_values()
+    corr_target = corr["medv"].drop("medv").sort_values()
     for feat, val in corr_target.items():
         bar = "█" * int(abs(val) * 20)
         direction = "+" if val > 0 else "-"
