@@ -1,108 +1,83 @@
+import io
 import os
-import ssl
 import pandas as pd
+import requests
+import urllib3
 
-RAW_DATA_PATH = "data/raw/boston.csv"
+# Suppress the InsecureRequestWarning from verify=False — intentional SSL bypass for macOS
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+RAW_DATA_PATH = "data/raw/fy2025_property_assessment.csv"
+PROCESSED_DIR = "data/processed"
 INSPECTION_PATH = "data/processed/data_inspection.txt"
 
-
-def inspect_raw_data(df: pd.DataFrame) -> str:
-    lines = []
-
-    lines += [
-        "=" * 60,
-        "RAW DATA INSPECTION",
-        "=" * 60,
-        "",
-        f"Shape: {df.shape[0]} rows × {df.shape[1]} columns",
-        "",
-        "Columns:",
-        *[f"  {col}" for col in df.columns],
-        "",
-        "Data types:",
-    ]
-    for col, dtype in df.dtypes.items():
-        lines.append(f"  {col:12s}  {dtype}")
-    lines.append("")
-
-    missing = df.isnull().sum()
-    total_missing = missing.sum()
-    lines += [f"Missing values (total: {total_missing}):"]
-    if total_missing == 0:
-        lines.append("  None — dataset is complete.")
-    else:
-        for col, n in missing[missing > 0].items():
-            pct = 100 * n / len(df)
-            lines.append(f"  {col:12s}  {n} ({pct:.1f}%)")
-    lines.append("")
-
-    lines += ["Summary statistics:", df.describe().to_string(), ""]
-
-    target_col = "medv"
-    numeric_cols = df.select_dtypes(include="number").columns.tolist()
-    categorical_cols = df.select_dtypes(include="object").columns.tolist()
-
-    unusable_cols = {
-        "black": "Racially charged feature from the 1978 paper — dropped in modern applications.",
-    }
-    usable_numeric = [c for c in numeric_cols if c not in unusable_cols and c != target_col]
-
-    lines += [
-        "-" * 60,
-        "Column notes:",
-        "",
-        f"  Target column : {target_col}",
-        f"    → Median home value in $1,000s. This is what we predict.",
-        "",
-        f"  Numeric columns used in modeling ({len(usable_numeric)}):",
-        *[f"    {col}" for col in usable_numeric],
-        "",
-    ]
-
-    if categorical_cols:
-        lines += [
-            f"  Categorical columns ({len(categorical_cols)}):",
-            *[f"    {col}" for col in categorical_cols],
-            "",
-        ]
-    else:
-        lines += [
-            "  Categorical columns: None",
-            "    → All features are numeric. No one-hot encoding needed.",
-            "",
-        ]
-
-    lines += [f"  Columns flagged as unusable ({len(unusable_cols)}):"]
-    for col, reason in unusable_cols.items():
-        lines.append(f"    {col}: {reason}")
-    lines.append("")
-
-    report = "\n".join(lines)
-    print(report)
-    return report
+FY2025_URL = (
+    "https://data.boston.gov/dataset/e02c44d2-3c64-459c-8fe2-e1ce5f38a035"
+    "/resource/6b7e460e-33f6-4e61-80bc-1bef2e73ac54"
+    "/download/fy2025-property-assessment-data_12_30_2024.csv"
+)
 
 
 def collect_data():
-    # Required on macOS — statsmodels download fails SSL verification without this
-    ssl._create_default_https_context = ssl._create_unverified_context
+    os.makedirs("data/raw", exist_ok=True)
+    os.makedirs(PROCESSED_DIR, exist_ok=True)
 
-    import statsmodels.api as sm
+    if not os.path.exists(RAW_DATA_PATH):
+        print("Downloading FY2025 Boston Property Assessment data...")
+        # requests handles AWS S3 signed-URL redirects correctly; verify=False for macOS SSL
+        response = requests.get(FY2025_URL, verify=False, timeout=120)
+        response.raise_for_status()
+        # io.BytesIO wraps raw bytes so pandas can read them without writing a temp file first
+        df = pd.read_csv(io.BytesIO(response.content), low_memory=False)
+        df.to_csv(RAW_DATA_PATH, index=False)
+        print(f"Saved to: {RAW_DATA_PATH}")
+    else:
+        print(f"Raw data already exists: {RAW_DATA_PATH}")
+        df = pd.read_csv(RAW_DATA_PATH, low_memory=False)
 
-    print("Downloading Boston Housing Dataset via statsmodels...")
-    boston = sm.datasets.get_rdataset("Boston", "MASS").data
+    print(f"Raw dataset shape: {df.shape}")
+    inspect_raw_data(df)
+    return df
 
-    report = inspect_raw_data(boston)
 
-    os.makedirs("data/processed", exist_ok=True)
+def inspect_raw_data(df):
+    target_col = "TOTAL_VALUE"
+    leakage_cols = {"LAND_VALUE", "BLDG_VALUE", "GROSS_TAX"}
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    usable_numeric = [c for c in numeric_cols if c not in leakage_cols and c != target_col]
+
+    lines = [
+        "Boston Property Assessment FY2025 — Raw Data Inspection",
+        "=" * 60,
+        f"Shape: {df.shape[0]:,} rows × {df.shape[1]} columns",
+        f"Target column: {target_col}",
+        "",
+        "Land use breakdown (LU):",
+    ]
+    if "LU" in df.columns:
+        for lu, count in df["LU"].value_counts().head(12).items():
+            lines.append(f"  {lu:6s}: {count:>7,}")
+    lines += [
+        "",
+        f"Missing values (total): {df.isnull().sum().sum():,}",
+        "",
+        f"Numeric columns in raw data, excluding leakage and target ({len(usable_numeric)}):",
+    ]
+    for col in usable_numeric:
+        lines.append(f"  {col}")
+    lines += [
+        "",
+        f"Columns excluded as data leakage: {sorted(leakage_cols)}",
+        "",
+        "Descriptive statistics:",
+        df[usable_numeric + [target_col]].describe().to_string(),
+    ]
+
+    report = "\n".join(lines) + "\n"
+    print(report)
     with open(INSPECTION_PATH, "w", encoding="utf-8") as f:
         f.write(report)
-    print(f"Inspection notes saved to: {INSPECTION_PATH}")
-
-    os.makedirs("data/raw", exist_ok=True)
-    boston.to_csv(RAW_DATA_PATH, index=False)
-    print(f"Raw dataset saved to: {RAW_DATA_PATH}")
-
-    return boston
+    print(f"Inspection saved to: {INSPECTION_PATH}")
 
 
 if __name__ == "__main__":

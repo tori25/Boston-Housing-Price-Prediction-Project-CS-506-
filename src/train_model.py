@@ -17,7 +17,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 INPUT_PATH = "data/processed/train_features.csv"
 MODEL_RESULTS_PATH = "data/processed/model_results.txt"
 PLOTS_DIR = "plots"
-TARGET_COLUMN = "medv"
+TARGET_COLUMN = "TOTAL_VALUE"
 
 
 def evaluate_model(y_true, y_pred):
@@ -58,7 +58,7 @@ def main():
         ]),
         "Lasso Regression": Pipeline([
             ("scaler", StandardScaler()),
-            ("model", Lasso(alpha=0.1, max_iter=5000))
+            ("model", Lasso(alpha=1000.0, max_iter=10000))
         ]),
         "Decision Tree": DecisionTreeRegressor(
             max_depth=5, min_samples_split=10, min_samples_leaf=5, random_state=42
@@ -78,7 +78,7 @@ def main():
         mae, rmse, r2 = evaluate_model(y_test, y_pred)
         results.append({"Model": name, "MAE": mae, "RMSE": rmse, "R²": r2})
         predictions[name] = y_pred
-        print(f"{name:25s}  MAE={mae:.2f}  RMSE={rmse:.2f}  R²={r2:.4f}")
+        print(f"{name:25s}  MAE={mae:,.0f}  RMSE={rmse:,.0f}  R²={r2:.4f}")
 
     results_df = pd.DataFrame(results)
     best = results_df.sort_values("RMSE").iloc[0]
@@ -88,11 +88,11 @@ def main():
         "Ridge Regression":  "Adds L2 penalty — shrinks correlated coefficients, reduces overfitting.",
         "Lasso Regression":  "Adds L1 penalty — forces some coefficients to zero (implicit feature selection).",
         "Decision Tree":     "Splits on single features. Captures non-linearity but high variance.",
-        "KNN (k=10)":        "Predicts from the 10 nearest neighborhoods by Euclidean distance.",
+        "KNN (k=10)":        "Predicts from the 10 nearest properties by Euclidean distance.",
     }
 
     report_lines = [
-        "Boston Housing Price Prediction — Model Results",
+        "Boston Property Assessment FY2025 — Model Results",
         "=" * 60,
         "",
         f"Dataset shape: {df.shape}",
@@ -104,7 +104,7 @@ def main():
     for _, row in results_df.iterrows():
         note = interpretations.get(row["Model"], "")
         report_lines.append(
-            f"{row['Model']:25s}  MAE={row['MAE']:>6.2f}  RMSE={row['RMSE']:>6.2f}  R²={row['R²']:.4f}"
+            f"{row['Model']:25s}  MAE={row['MAE']:>10,.0f}  RMSE={row['RMSE']:>10,.0f}  R²={row['R²']:.4f}"
         )
         report_lines.append(f"  → {note}")
         report_lines.append("")
@@ -112,8 +112,8 @@ def main():
     report_lines += [
         "-" * 60,
         f"Best model (lowest RMSE): {best['Model']}",
-        f"  MAE:  {best['MAE']:.2f}",
-        f"  RMSE: {best['RMSE']:.2f}",
+        f"  MAE:  ${best['MAE']:,.0f}",
+        f"  RMSE: ${best['RMSE']:,.0f}",
         f"  R²:   {best['R²']:.4f}",
     ]
 
@@ -135,33 +135,38 @@ def main():
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/model_comparison.png", dpi=100)
     plt.close()
+    print("Saved: model_comparison.png")
 
     best_name = best["Model"]
     best_preds = predictions[best_name]
 
+    # Red dashed diagonal = perfect predictions; points close to it = low error
     plt.figure(figsize=(8, 6))
-    plt.scatter(y_test, best_preds, alpha=0.6)
-    min_val = min(float(y_test.min()), float(best_preds.min()))
-    max_val = max(float(y_test.max()), float(best_preds.max()))
+    plt.scatter(y_test / 1_000, best_preds / 1_000, alpha=0.4, s=10)
+    min_val = min(float(y_test.min()), float(best_preds.min())) / 1_000
+    max_val = max(float(y_test.max()), float(best_preds.max())) / 1_000
     plt.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=1.5)
-    plt.xlabel("Actual Median Home Value ($1000s)")
-    plt.ylabel("Predicted Median Home Value ($1000s)")
+    plt.xlabel("Actual Assessed Value ($1,000s)")
+    plt.ylabel("Predicted Assessed Value ($1,000s)")
     plt.title(f"Actual vs Predicted — {best_name}")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/actual_vs_predicted.png", dpi=100)
     plt.close()
+    print("Saved: actual_vs_predicted.png")
 
     residuals = y_test - best_preds
     plt.figure(figsize=(8, 6))
-    plt.scatter(best_preds, residuals, alpha=0.6)
+    plt.scatter(best_preds / 1_000, residuals / 1_000, alpha=0.4, s=10)
     plt.axhline(y=0, color="r", linestyle="--", linewidth=1.5)
-    plt.xlabel("Predicted Median Home Value ($1000s)")
-    plt.ylabel("Residuals")
+    plt.xlabel("Predicted Assessed Value ($1,000s)")
+    plt.ylabel("Residuals ($1,000s)")
     plt.title(f"Residual Plot — {best_name}")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/residual_plot.png", dpi=100)
     plt.close()
+    print("Saved: residual_plot.png")
 
+    # Decision Tree is not in a Pipeline so plot_tree receives it directly
     dt_model = models["Decision Tree"]
     plt.figure(figsize=(20, 10))
     plot_tree(dt_model, feature_names=X.columns, filled=True, rounded=True, fontsize=8, max_depth=2)
@@ -169,9 +174,10 @@ def main():
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/decision_tree.png", dpi=100)
     plt.close()
+    print("Saved: decision_tree.png")
 
-    # K-Means: exploration only — segments neighborhoods, not used for prediction
-    cluster_features = ["rm", "lstat"]  # two strongest predictors
+    # K-Means: exploration only — segments properties by size and bedroom count
+    cluster_features = ["LIVING_AREA", "BED_RMS"]
     df_cluster = df[cluster_features + [TARGET_COLUMN]].dropna().copy()
 
     scaler = StandardScaler()
@@ -185,27 +191,27 @@ def main():
     for cluster_id in range(4):
         mask = df_cluster["Cluster"] == cluster_id
         ax.scatter(
-            df_cluster.loc[mask, "rm"],
-            df_cluster.loc[mask, TARGET_COLUMN],
+            df_cluster.loc[mask, "LIVING_AREA"],
+            df_cluster.loc[mask, TARGET_COLUMN] / 1_000,
             c=cluster_colors[cluster_id],
             label=f"Cluster {cluster_id}",
-            alpha=0.6,
-            s=30,
+            alpha=0.4,
+            s=10,
         )
-    ax.set_xlabel("Average Rooms per Dwelling (rm)")
-    ax.set_ylabel("Median Home Value ($1000s)")
-    ax.set_title("K-Means Clustering (k=4): Boston Neighborhood Segments")
+    ax.set_xlabel("Living Area (sq ft)")
+    ax.set_ylabel("Total Assessed Value ($1,000s)")
+    ax.set_title("K-Means Clustering (k=4): Boston Property Segments")
     ax.legend(title="Cluster")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/kmeans_clusters.png", dpi=100)
     plt.close()
-    print("K-Means cluster plot saved.")
+    print("Saved: kmeans_clusters.png")
 
     lr_pipeline = models["Linear Regression"]
     lr_coefs = lr_pipeline.named_steps["model"].coef_
     coef_df = pd.DataFrame({"Feature": X.columns.tolist(), "Coefficient": lr_coefs})
     coef_df["AbsCoef"] = coef_df["Coefficient"].abs()
-    coef_df = coef_df.sort_values("AbsCoef", ascending=True)  # sorted by magnitude for readability
+    coef_df = coef_df.sort_values("AbsCoef", ascending=True)
 
     colors_coef = ["#D65F5F" if c < 0 else "#4878CF" for c in coef_df["Coefficient"]]
     fig, ax = plt.subplots(figsize=(9, 7))
@@ -216,7 +222,7 @@ def main():
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/coefficient_plot.png", dpi=100)
     plt.close()
-    print("Coefficient plot saved.")
+    print("Saved: coefficient_plot.png")
 
     return results_df
 

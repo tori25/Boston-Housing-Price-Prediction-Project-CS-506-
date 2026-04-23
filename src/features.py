@@ -10,40 +10,41 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     created_features = []
 
-    # log(1 + crim) — crime is heavily right-skewed; log compresses the tail
-    if "crim" in df.columns:
-        df["CRIME_LOG"] = np.log1p(df["crim"])
-        created_features.append("CRIME_LOG")
+    # 2025 - YR_BUILT — older buildings tend to command lower prices
+    if "YR_BUILT" in df.columns:
+        df["AGE"] = 2025 - df["YR_BUILT"]
+        created_features.append("AGE")
 
-    # rm² — value premium for extra rooms is non-linear; squaring captures the curve
-    if "rm" in df.columns:
-        df["ROOM_SQ"] = df["rm"] ** 2
-        created_features.append("ROOM_SQ")
+    # 1 if property was remodeled after original construction, 0 if never touched
+    if {"YR_BUILT", "YR_REMODEL"}.issubset(df.columns):
+        df["IS_REMODELED"] = (df["YR_REMODEL"] > df["YR_BUILT"]).astype(int)
+        created_features.append("IS_REMODELED")
 
-    # tax / rm — ownership cost per unit of space
-    if {"tax", "rm"}.issubset(df.columns):
-        df["TAX_PER_ROOM"] = df["tax"] / df["rm"]
-        created_features.append("TAX_PER_ROOM")
+    # FULL_BTH + 0.5 * HLF_BTH — weighted bath count; half baths add less value
+    if {"FULL_BTH", "HLF_BTH"}.issubset(df.columns):
+        df["BATH_TOTAL"] = df["FULL_BTH"] + 0.5 * df["HLF_BTH"]
+        created_features.append("BATH_TOTAL")
 
-    # lstat / rm — combines the two strongest predictors (r = -0.76 and r = +0.69)
-    if {"lstat", "rm"}.issubset(df.columns):
-        df["LSTAT_PER_ROOM"] = df["lstat"] / df["rm"]
-        created_features.append("LSTAT_PER_ROOM")
+    # log(LIVING_AREA) — square footage is right-skewed; log compresses the tail
+    if "LIVING_AREA" in df.columns:
+        df["LOG_LIVING_AREA"] = np.log1p(df["LIVING_AREA"])
+        created_features.append("LOG_LIVING_AREA")
 
-    # nox / dis — pollution per unit of distance from employment centers
-    if {"nox", "dis"}.issubset(df.columns):
-        df["POLLUTION_PROXIMITY"] = df["nox"] / df["dis"]
-        created_features.append("POLLUTION_PROXIMITY")
+    # log(LAND_SF) — lot size is right-skewed
+    if "LAND_SF" in df.columns:
+        df["LOG_LAND_SF"] = np.log1p(df["LAND_SF"])
+        created_features.append("LOG_LAND_SF")
 
-    # ptratio × lstat — bad schools in poor areas compound each other
-    if {"ptratio", "lstat"}.issubset(df.columns):
-        df["SCHOOL_INDEX"] = df["ptratio"] * df["lstat"]
-        created_features.append("SCHOOL_INDEX")
+    # LIVING_AREA / TT_RMS — average room size; larger rooms signal higher quality
+    if {"LIVING_AREA", "TT_RMS"}.issubset(df.columns):
+        safe_rooms = df["TT_RMS"].replace(0, np.nan)
+        df["AREA_PER_ROOM"] = (df["LIVING_AREA"] / safe_rooms).fillna(df["LIVING_AREA"])
+        created_features.append("AREA_PER_ROOM")
 
-    # age × dis — old housing stock that is also far from employment
-    if {"age", "dis"}.issubset(df.columns):
-        df["AGE_DIST"] = df["age"] * df["dis"]
-        created_features.append("AGE_DIST")
+    # BED_RMS * BATH_TOTAL — luxury homes score high on both; BATH_TOTAL created above
+    if {"BED_RMS", "BATH_TOTAL"}.issubset(df.columns):
+        df["BED_BATH"] = df["BED_RMS"] * df["BATH_TOTAL"]
+        created_features.append("BED_BATH")
 
     print(f"Created {len(created_features)} features: {created_features}")
     return df

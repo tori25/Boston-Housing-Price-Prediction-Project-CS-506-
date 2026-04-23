@@ -10,11 +10,11 @@
 
 ```bash
 make install      # install all dependencies
-make collect      # download Boston Housing dataset  →  data/raw/boston.csv
-make clean        # clean raw data                   →  data/processed/boston_clean.csv
-make features     # engineer features                →  data/processed/train_features.csv
-make visualize    # generate EDA plots               →  plots/
-make train        # train all models                 →  plots/ + data/processed/model_results.txt
+make collect      # download FY2025 Boston Property Assessment dataset  →  data/raw/fy2025_property_assessment.csv
+make clean        # clean raw data                                       →  data/processed/boston_clean.csv
+make features     # engineer features                                    →  data/processed/train_features.csv
+make visualize    # generate EDA plots                                   →  plots/
+make train        # train all models                                     →  plots/ + data/processed/model_results.txt
 ```
 
 Or run the entire pipeline at once:
@@ -31,13 +31,13 @@ make test
 python3 -m pytest src/tests/test_project.py -v
 ```
 
-A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 19 tests automatically on every push and pull request to `main`.
+A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 22 tests automatically on every push and pull request to `main`.
 
 ### Output locations
 
 | Output | Path |
 |--------|------|
-| Raw dataset | `data/raw/boston.csv` |
+| Raw dataset | `data/raw/fy2025_property_assessment.csv` |
 | Cleaned dataset | `data/processed/boston_clean.csv` |
 | Engineered features | `data/processed/train_features.csv` |
 | Model comparison results | `data/processed/model_results.txt` |
@@ -48,24 +48,24 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 19 tests autom
 ```
 ├── data/
 │   ├── raw/
-│   │   ├── boston.csv              # Boston Housing Dataset (downloaded by collect_data.py)
-│   │   └── zillow.csv              # Zillow Boston median sale price data (pre-downloaded)
+│   │   ├── fy2025_property_assessment.csv   # Boston FY2025 Property Assessment (downloaded by collect_data.py)
+│   │   └── zillow.csv                       # Zillow Boston median sale price data (pre-downloaded)
 │   └── processed/
-│       ├── boston_clean.csv        # Cleaned dataset
-│       ├── train_features.csv      # Dataset with engineered features
-│       ├── model_results.txt       # Model comparison output
-│       └── data_inspection.txt     # Raw data inspection report
+│       ├── boston_clean.csv                 # Cleaned dataset
+│       ├── train_features.csv               # Dataset with engineered features
+│       ├── model_results.txt                # Model comparison output
+│       └── data_inspection.txt              # Raw data inspection report
 ├── src/
-│   ├── collect_data.py             # Downloads Boston Housing Dataset
-│   ├── clean_data.py               # Data cleaning pipeline
-│   ├── features.py                 # Feature engineering
-│   ├── visualize.py                # EDA visualizations
-│   ├── train_model.py              # Model training and evaluation
-│   ├── zillow_analysis.py          # Zillow trend analysis
+│   ├── collect_data.py                      # Downloads FY2025 Boston Property Assessment data
+│   ├── clean_data.py                        # Data cleaning pipeline
+│   ├── features.py                          # Feature engineering
+│   ├── visualize.py                         # EDA visualizations
+│   ├── train_model.py                       # Model training and evaluation
+│   ├── zillow_analysis.py                   # Zillow trend analysis
 │   └── tests/
-│       └── test_project.py         # Unit tests (pytest)
-├── plots/                          # Generated visualizations
-├── main.py                         # Full pipeline entry point
+│       └── test_project.py                  # Unit tests (pytest)
+├── plots/                                   # Generated visualizations
+├── main.py                                  # Full pipeline entry point
 ├── Makefile
 └── requirements.txt
 ```
@@ -74,13 +74,13 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 19 tests autom
 
 ## Project Goal
 
-Predict **`medv`** — the median value of owner-occupied homes in $1,000s — for each of 506 Boston neighborhoods using the Boston Housing Dataset (Harrison & Rubinfeld, 1978).
+Predict **`TOTAL_VALUE`** — the total assessed value of a residential property in Boston — using the City of Boston's FY2025 Property Assessment dataset, downloaded from [data.boston.gov](https://data.boston.gov/dataset/property-assessment).
 
-The dataset contains 13 features including crime rate, number of rooms, property tax rate, and access to employment centers. The project applies the full data science lifecycle: collection → cleaning → feature engineering → visualization → modeling → evaluation.
+The dataset contains **183,445 property records** (as of December 2024) covering all taxable and non-taxable parcels in the City of Boston. After filtering to residential properties and cleaning, the modeling dataset contains **132,611 rows × 24 features**. Unlike the classic 1978 Boston Housing Dataset which described census-tract averages, this dataset contains actual individual property records — each row is one house, condo, or apartment building.
 
-Performance is measured with **MAE**, **RMSE**, and **R²**.
+Performance is measured with **MAE**, **RMSE**, and **R²**. All error values are in dollars.
 
-As supplemental real-world context, Zillow median sale price data for Boston, MA is also visualized to show how the market has evolved since the original 1978 dataset.
+As supplemental real-world context, Zillow median sale price data for Boston, MA (2018–2026) is visualized alongside the modeled assessed values.
 
 ---
 
@@ -88,130 +88,135 @@ As supplemental real-world context, Zillow median sale price data for Boston, MA
 
 Implemented in `src/collect_data.py`.
 
-**Primary dataset:** Boston Housing Dataset loaded via `statsmodels.datasets.get_rdataset("Boston", "MASS")`. Saved to `data/raw/boston.csv`.
+**Primary dataset:** City of Boston FY2025 Property Assessment data, downloaded via direct URL from [data.boston.gov](https://data.boston.gov/dataset/property-assessment). Saved to `data/raw/fy2025_property_assessment.csv`.
 
 | Feature | Description |
 |---------|-------------|
-| `crim` | Per capita crime rate by town |
-| `zn` | Proportion of residential land zoned for large lots |
-| `indus` | Proportion of non-retail business acres |
-| `chas` | Charles River dummy (1 if tract bounds river) |
-| `nox` | Nitric oxide concentration |
-| `rm` | Average number of rooms per dwelling |
-| `age` | Proportion of units built before 1940 |
-| `dis` | Weighted distance to five employment centers |
-| `rad` | Accessibility index to radial highways |
-| `tax` | Property tax rate per $10,000 |
-| `ptratio` | Pupil-teacher ratio by town |
-| `black` | Racial composition index — **dropped in cleaning** |
-| `lstat` | % lower-status population |
-| `medv` | **Target** — Median home value in $1,000s |
+| `LIVING_AREA` | Living area square footage |
+| `LAND_SF` | Parcel land area in square feet |
+| `GROSS_AREA` | Gross floor area |
+| `BED_RMS` | Number of bedrooms |
+| `FULL_BTH` | Number of full bathrooms |
+| `HLF_BTH` | Number of half bathrooms |
+| `TT_RMS` | Total number of rooms |
+| `FIREPLACES` | Number of fireplaces |
+| `NUM_PARKING` | Number of parking spaces |
+| `YR_BUILT` | Year property was built |
+| `YR_REMODEL` | Year property was last remodeled |
+| `RES_FLOOR` | Number of residential stories |
+| `LU` | Land use type (R1/R2/R3/R4/CD) — encoded as 1–5 |
+| `ZIP_CODE` | Zip code of parcel |
+| `OWN_OCC` | Owner-occupied (Y=1, N=0) |
+| `OVERALL_COND` | Overall condition (E=5, G=4, A=3, F=2, P=1) |
+| `TOTAL_VALUE` | **Target** — Total assessed value in dollars |
 
-**Secondary dataset:** Zillow Research Data — Median Sale Price by Metro Area (2018–2026). Used for a trend visualization showing how the Boston real estate market has evolved since the original 1978 dataset.
+**Excluded as data leakage:** `LAND_VALUE`, `BLDG_VALUE` (components of TOTAL_VALUE), `GROSS_TAX` (derived from TOTAL_VALUE).
 
-The `collect_data.py` script also produces `data/processed/data_inspection.txt` with a full summary of the raw data: shape, dtypes, missing values, and descriptive statistics.
+**Secondary dataset:** Zillow Research Data — Median Sale Price by Metro Area (2018–2026). Used for a trend visualization only, not for modeling.
 
 ---
 
 ## Data Cleaning
 
-Implemented in `src/clean_data.py`. Final cleaned dataset: **485 rows × 13 columns**, zero missing values. The `black` column is dropped here before any modeling.
+Implemented in `src/clean_data.py`. Final cleaned dataset: **132,611 rows × 18 columns**, zero missing values.
 
-### Step 1 — Drop duplicate rows
-**What:** Remove any rows that appear more than once.
-**Why:** Duplicates cause the model to see the same observation multiple times during training, artificially inflating confidence in those data points.
+### Step 1 — Parse currency-formatted columns
+**What:** Strip commas and dollar signs from `LAND_SF`, `TOTAL_VALUE`, and other value columns stored as strings like `"1,150"` or `"$9,252.42"`.
+**Why:** The raw CSV stores these as formatted strings, not numbers. Pandas reads them as objects and they must be converted to float before any filtering.
 
-### Step 2 — Drop ethically problematic column
-**What:** Drop `black` unconditionally.
-**Why:** Racially charged feature from the 1978 paper — not an appropriate predictor in any modern application. Flagged in Check-In 1.
+### Step 2 — Filter to residential properties
+**What:** Keep only rows where `LU` is in {R1, R2, R3, R4, CD}. Drops 46,934 non-residential rows (commercial, industrial, tax-exempt, etc.).
+**Why:** Commercial and industrial properties have different value drivers than residential. Mixing them would confuse every model.
 
-### Step 3 — Remove irrelevant ID columns
-**What:** Drop any column named `id` or `unnamed: 0` (index columns accidentally saved to CSV).
-**Why:** ID columns are arbitrary identifiers with no relationship to home value.
+### Step 3 — Drop admin, ID, and leakage columns
+**What:** Drop 47 columns — admin (PID, OWNER, mailing address), ID columns (GIS_ID), condo-specific columns (CD_FLOOR, RES_UNITS), granular style codes (BTHRM_STYLE1, KITCHEN_TYPE), and leakage columns.
+**Why:** Admin columns have no relationship to value; leakage columns (LAND_VALUE + BLDG_VALUE = TOTAL_VALUE) would give any model perfect information and produce meaningless results.
 
-### Step 4 — Fix data types
-**What:** Cast `chas`, `rad`, and `tax` to `int`.
-**Why:** These columns were loaded as `float64` by pandas but are conceptually integers — `chas` is a 0/1 dummy, `rad` is an ordinal index 1–24, `tax` is a whole-number rate. Correct types prevent floating-point noise in distance calculations (KNN).
+### Step 4 — Remove duplicate rows
+**What:** Drop exact duplicate rows.
+**Why:** Duplicates inflate training confidence in those data points.
 
-### Step 5 — Handle missing values
-**What:** Detect columns with missing values and fill with the column median.
-**Why:** The classic Boston dataset has no missing values, but the check is explicit so the script is safe if the source data changes. Median imputation preserves the distribution better than mean imputation when outliers are present.
+### Step 5 — Remove zero assessed values
+**What:** Remove rows where `TOTAL_VALUE == 0`.
+**Why:** Tax-exempt or unassessed properties have no useful assessed value to predict.
 
-### Step 6 — Remove censored values
-**What:** Remove all rows where `medv == 50`.
-**Why:** The original dataset artificially caps home values at $50,000. These 16 rows are not real observations — they represent homes worth *at least* $50k but recorded as exactly $50k. Keeping them teaches the model a false ceiling, causing it to systematically underpredict expensive neighborhoods.
+### Step 6 — Remove zero living area
+**What:** Remove 87 rows where `LIVING_AREA == 0`.
+**Why:** Zero living area indicates missing data — no valid property has zero square footage.
 
-### Step 7 — Remove rows with negative feature values
-**What:** Drop any row where a non-target numeric feature is negative.
-**Why:** All Boston Housing features (crime rate, rooms, distance, etc.) are physically non-negative. A negative value indicates a data entry error.
+### Step 7 — Remove invalid year built
+**What:** Remove 76 rows where `YR_BUILT` is outside 1700–2025.
+**Why:** Values like 0 or 20198 are data entry errors; year built is used to compute the AGE feature.
 
-### Step 8 — Remove extreme outliers (crime rate)
-**What:** Remove rows in the top 1% of `crim`, dropping 5 rows.
-**Why:** A small number of Boston tracts have crime rates orders of magnitude above the rest. These extreme values distort Euclidean distances in KNN and skew linear model coefficients. Log-transforming `crim` in feature engineering further tames this distribution.
+### Step 8 — Encode categorical columns
+**What:** `LU` → integer map (R1=1 … CD=5); `OWN_OCC` → binary (Y=1); `OVERALL_COND` → ordinal (E=5 … P=1 from "X - Description" format).
+**Why:** All sklearn models require numeric inputs. Ordinal encoding preserves the ordering of condition grades.
+
+### Step 9 — Fill missing values with median
+**What:** 10 numeric columns had missing values (e.g., `YR_REMODEL`, `LAND_SF`). Filled with column median.
+**Why:** Median imputation is robust to outliers; preserves the distribution better than mean for skewed columns.
+
+### Step 10 — Remove top 1% of TOTAL_VALUE
+**What:** Remove 1,340 rows where `TOTAL_VALUE > $4,454,100`.
+**Why:** Ultra-luxury properties (hotels, large apartment complexes) are in a different market segment and distort linear model coefficients and KNN distances.
 
 ---
 
 ## Feature Extraction
 
-Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**485 rows × 20 columns** — 13 original + 7 engineered).
+Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**132,611 rows × 25 columns** — 18 original + 7 engineered).
 
-Before engineering, all raw features were ranked by correlation with `medv` to identify the strongest candidates.
-
-### Feature correlations with medv
+### Feature correlations with TOTAL_VALUE
 
 | Feature | Correlation | Notes |
 |---------|------------|-------|
-| `lstat` | −0.758 | Strongest predictor — poverty rate is a direct proxy for neighborhood desirability |
-| `rm` | +0.690 | More rooms = more space = higher value |
-| `indus` | −0.595 | Industrial land use reduces residential desirability |
-| `tax` | −0.562 | Higher taxes increase ownership cost |
-| `nox` | −0.517 | Air pollution proxy |
-| `ptratio` | −0.514 | School quality proxy |
-| `crim` | −0.506 | Crime directly reduces safety and desirability |
-| `age` | −0.485 | Older housing stock correlates with lower value |
-| `rad` | −0.462 | Higher highway exposure → more noise → lower value |
-| `zn` | +0.403 | More residential zoning → suburban, higher-value areas |
-| `dis` | +0.358 | Farther from industry → quieter, cleaner neighborhoods |
-| `chas` | +0.072 | Kept for EDA only — only 29 river-adjacent tracts after cleaning |
-| `black` | — | **Dropped in cleaning** — racially charged feature, not an appropriate predictor |
+| `LIVING_AREA` | +0.437 | Strongest predictor — more space = more value |
+| `FULL_BTH` | +0.424 | Full bathrooms strongly signal quality |
+| `GROSS_AREA` | +0.324 | Total building footprint |
+| `FIREPLACES` | +0.268 | Luxury amenity |
+| `TT_RMS` | +0.262 | Total rooms |
+| `BED_RMS` | +0.253 | Bedrooms |
+| `RES_FLOOR` | +0.253 | Stories |
+| `OVERALL_COND` | +0.236 | Condition grade |
+| `HLF_BTH` | +0.226 | Half baths |
+| `LAND_SF` | +0.101 | Lot size — weaker than interior space |
+| `ZIP_CODE` | −0.051 | Slight negative (lower zip codes in higher-value neighborhoods) |
 
 ### Engineered features
 
 | Feature | Formula | Rationale |
 |---------|---------|-----------|
-| `CRIME_LOG` | `log(1 + crim)` | Crime is heavily right-skewed — log compresses the tail so a jump from 0.1 to 1.0 is treated the same as 1.0 to 10.0 |
-| `ROOM_SQ` | `rm²` | The value premium for extra rooms is non-linear — going from 6 to 7 rooms adds more value than 4 to 5 |
-| `TAX_PER_ROOM` | `tax / rm` | Ownership cost per unit of space — a high tax rate on a small home is a worse deal than the same rate on a large home |
-| `LSTAT_PER_ROOM` | `lstat / rm` | Poverty density relative to home size — combines the two strongest predictors |
-| `POLLUTION_PROXIMITY` | `nox / dis` | Pollution concentration per unit of distance from employment centers |
-| `SCHOOL_INDEX` | `ptratio × lstat` | School quality weighted by neighborhood poverty — bad schools in poor areas compound each other |
-| `AGE_DIST` | `age × dis` | Old housing stock that is also far from employment — the least desirable combination |
-
-All original columns are preserved so models have access to both raw and engineered features.
+| `AGE` | `2025 − YR_BUILT` | Older buildings tend to be worth less; computable and interpretable |
+| `IS_REMODELED` | `1 if YR_REMODEL > YR_BUILT` | Binary flag for renovation — remodeled properties command a premium |
+| `BATH_TOTAL` | `FULL_BTH + 0.5 × HLF_BTH` | Weighted bath count; half baths add value but less than full baths |
+| `LOG_LIVING_AREA` | `log(1 + LIVING_AREA)` | Living area is right-skewed — log compresses the tail |
+| `LOG_LAND_SF` | `log(1 + LAND_SF)` | Lot size is right-skewed |
+| `AREA_PER_ROOM` | `LIVING_AREA / TT_RMS` | Average room size — larger rooms signal higher quality |
+| `BED_BATH` | `BED_RMS × BATH_TOTAL` | Combined bedroom/bath count — luxury homes score high on both |
 
 ---
 
 ## Modeling Methods
 
-Implemented in `src/train_model.py`. All models are trained on an **80/20 train/test split** (`random_state=42`). Linear models and KNN are wrapped in a `StandardScaler` pipeline; the Decision Tree operates on raw feature values.
+Implemented in `src/train_model.py`. All models trained on an **80/20 train/test split** (`random_state=42`, 106,088 training / 26,523 test). Linear models and KNN wrapped in a `StandardScaler` pipeline; Decision Tree operates on raw values.
 
 ### Linear Regression (baseline)
-Fits a global hyperplane through all 20 features. No regularization. This is the simplest possible model and sets the performance floor.
+Fits a global hyperplane through all 24 features. No regularization.
 
 ### Ridge Regression
-Adds an L2 penalty to shrink correlated coefficients. Several Boston features are correlated (e.g. `tax` and `rad`, `nox` and `indus`), so Ridge is a natural second step.
+Adds L2 penalty to shrink correlated coefficients. Several features are correlated (e.g., `LIVING_AREA` and `GROSS_AREA`, `BED_RMS` and `TT_RMS`).
 
 ### Lasso Regression
-Adds an L1 penalty that forces some coefficients to exactly zero — implicit feature selection across 20 features. `alpha=0.1`, `max_iter=5000`.
+Adds L1 penalty that forces some coefficients to zero — implicit feature selection. `alpha=1000`, `max_iter=10000`.
 
 ### Decision Tree
-Splits on individual features recursively. Constrained to `max_depth=5`, `min_samples_leaf=5` to limit overfitting. Can capture non-linear relationships but suffers from high variance on small datasets.
+Splits on individual features recursively. `max_depth=5`, `min_samples_leaf=5`. Captures non-linear relationships that linear models miss.
 
 ### KNN (k=10)
-Predicts by averaging the 10 most similar neighborhoods by Euclidean distance. No parametric assumptions — purely local similarity. `k=10` reduces the variance of single-neighbor predictions.
+Predicts by averaging the 10 most similar properties by Euclidean distance. No parametric assumptions — purely local similarity. Naturally captures neighborhood effects since nearby properties have similar features.
 
 ### K-Means clustering (exploration only)
-Groups Boston neighborhoods into 4 segments based on `rm` and `lstat`. Not used for prediction — reveals natural market tiers (wealthy suburbs vs inner-city tracts) in an unsupervised way.
+Groups Boston properties into 4 segments based on `LIVING_AREA` and `BED_RMS`. Not used for prediction — reveals natural market tiers.
 
 ---
 
@@ -219,68 +224,60 @@ Groups Boston neighborhoods into 4 segments based on `rm` and `lstat`. Not used 
 
 | Model | MAE | RMSE | R² | vs. Baseline (RMSE) |
 |-------|-----|------|----|---------------------|
-| **Linear Regression** | **2.27** | **2.92** | **0.847** | — baseline |
-| Ridge Regression | 2.34 | 3.01 | 0.837 | +0.09 |
-| Lasso Regression | 2.40 | 3.07 | 0.831 | +0.15 |
-| Decision Tree | 2.55 | 3.53 | 0.777 | +0.61 |
-| KNN (k=10) | 2.28 | 3.07 | 0.830 | +0.15 |
+| Linear Regression | $253,069 | $388,393 | 0.509 | — baseline |
+| Ridge Regression | $253,046 | $388,391 | 0.509 | ≈ same |
+| Lasso Regression | $253,068 | $388,388 | 0.509 | ≈ same |
+| Decision Tree | $203,991 | $304,670 | 0.698 | −$83,723 |
+| **KNN (k=10)** | **$173,639** | **$293,096** | **0.720** | **−$95,297** |
 
-*All error values in $1,000s. Best per metric in bold.*
+*All error values in dollars. Best per metric in bold.*
 
-### Best model: Linear Regression
+### Best model: KNN (k=10)
 
-**Linear Regression** achieved the best result on all three metrics — lowest RMSE (2.92), lowest MAE (2.27), and highest R² (0.847). Typical predictions are within **$2,270** of the true median neighborhood value.
+**KNN (k=10)** achieved the best result on all three metrics — lowest RMSE ($293k), lowest MAE ($174k), and highest R² (0.720). On average, predictions are within **$174,000** of the true assessed value.
 
-### Why no model beat the linear baseline on RMSE
+### Why KNN beats linear regression on this dataset
 
-**Ridge and Lasso** scored slightly below Linear Regression. Regularization penalizes large coefficients to reduce overfitting, but with only 20 features and ~388 training rows there is not much overfitting to correct. The penalty ends up shrinking genuinely useful coefficients, slightly hurting performance.
+**Linear Regression (R²=0.51)** fits a single global plane: if Living Area increases by 100 sq ft, the model always adds the same dollar amount, regardless of the property's location or type. That assumption is wrong for real estate — an extra 100 sq ft in Beacon Hill adds far more value than in East Boston.
 
-**Decision Tree** was the clear worst (RMSE 3.53, R² 0.777). A single tree makes locally optimal splits but misses the smooth global linear trend between `rm`, `lstat`, and `medv`. Deeper trees would overfit on only 388 training rows.
+**KNN (R²=0.72)** has no such assumption. It finds the 10 most similar properties (same zip code range, similar size, similar bedrooms) and averages their values. This naturally captures local market variation without needing to model it explicitly.
+
+**Decision Tree (R²=0.70)** also outperforms linear models by creating different prediction rules for different property segments — e.g., "if LIVING_AREA > 2,000 and FULL_BTH > 2 then predict $X". But it's slightly noisier than KNN at depth=5.
 
 ### What this tells us about the data
 
-The fact that the simplest model wins is the key finding: **Boston neighborhood prices have a largely linear relationship with the features.** Good feature engineering (`CRIME_LOG`, `ROOM_SQ`, `SCHOOL_INDEX`, etc.) allowed the linear model to capture non-linear patterns without requiring a non-linear model.
+Boston property values are **highly local and non-linear** — the same square footage is worth very different amounts depending on neighborhood and property type. Linear models cannot capture this without neighborhood-level dummy variables. KNN captures it implicitly by finding similar properties.
 
 ---
 
 ## Visualizations
 
-All plots are saved to `plots/` after running `make visualize` and `make train`.
+All plots saved to `plots/` after running `make visualize` and `make train`.
 
 | File | Step | Description |
 |------|------|-------------|
-| `target_distribution.png` | EDA | Histogram of `medv` with mean and median lines |
-| `scatter_rm_vs_medv.png` | EDA | Rooms vs home value scatter with trend line (r = +0.69) |
-| `scatter_lstat_vs_medv.png` | EDA | Poverty rate vs home value scatter (r = −0.76) |
-| `boxplot_chas_vs_medv.png` | EDA | River-adjacent vs non-river-adjacent home values |
+| `target_distribution.png` | EDA | Histogram of `TOTAL_VALUE` with mean and median lines |
+| `scatter_area_vs_value.png` | EDA | Living area vs assessed value scatter (r = +0.44) |
+| `scatter_beds_vs_value.png` | EDA | Bedrooms vs assessed value scatter |
+| `boxplot_lu_vs_value.png` | EDA | Property type (R1/R2/R3/R4/CD) vs assessed value |
 | `correlation_heatmap.png` | EDA | Full feature correlation matrix |
 | `model_comparison.png` | Modeling | Bar chart comparing MAE, RMSE, and R² across all 5 models |
-| `actual_vs_predicted.png` | Modeling | Actual vs predicted home values (best model) |
-| `residual_plot.png` | Modeling | Prediction error vs predicted value (best model) |
-| `coefficient_plot.png` | Modeling | Linear Regression coefficients by feature (magnitude + direction) |
+| `actual_vs_predicted.png` | Modeling | Actual vs predicted assessed values (best model: KNN) |
+| `residual_plot.png` | Modeling | Prediction error vs predicted value (best model: KNN) |
+| `coefficient_plot.png` | Modeling | Linear Regression coefficients by feature |
 | `decision_tree.png` | Modeling | Decision tree structure (top 2 levels) |
-| `kmeans_clusters.png` | Modeling | K-Means (k=4) Boston neighborhood segments |
-| `zillow_boston_trend.png` | Context | Boston median sale price trend over time (Zillow) |
-
-### Key insights
-
-- **Actual vs. Predicted:** Points cluster tightly along the 45° line. Slight underprediction at the high end — expected, since `medv==50` censoring means few high-value examples survived cleaning.
-- **Residuals:** Centered on zero with no clear pattern — no systematic bias.
-- **Coefficient plot:** `LSTAT_PER_ROOM`, `ROOM_SQ`, and `SCHOOL_INDEX` have the largest magnitudes, confirming that rooms and poverty rate are the dominant price drivers.
-- **Decision Tree top splits:** First split on `SCHOOL_INDEX`, second split on `rm` — confirming that the engineered features captured meaningful signal.
-- **K-Means clusters:** Four clear market tiers — high-rooms/low-poverty (wealthy suburbs) vs low-rooms/high-poverty (inner-city tracts), with two mid-range segments.
-- **Zillow trend:** Boston median prices rose from ~$489k (2018) to ~$820k (peak 2025), contextualizing how much the 1978 dataset understates current values.
+| `kmeans_clusters.png` | Modeling | K-Means (k=4) Boston property market segments |
+| `zillow_boston_trend.png` | Context | Boston median sale price trend over time (Zillow 2018–2026) |
 
 ---
 
 ## Limitations
 
-- **1978 dollars:** All prices are in 1978 $1,000s and are not comparable to modern values. The Zillow trend plot provides modern context.
-- **`medv` ceiling:** The dataset caps home values at $50,000. After removing these 16 censored rows, expensive neighborhoods are underrepresented — all models will underpredict high-value areas.
-- **`black` column excluded:** The original dataset includes a racially charged feature derived from the 1978 paper. It is dropped in the cleaning step and is not an appropriate variable for any modern application.
-- **Small dataset:** 485 rows limits how well complex models can generalize. Random Forest, Gradient Boosting, or neural networks would need significantly more data to outperform the linear baseline here.
-- **KNN and dimensionality:** KNN degrades as the number of features grows (curse of dimensionality). With 20 features it performs well, but adding more features would require PCA or feature selection first.
-- **Geographic granularity:** The dataset describes census tracts — individual properties within a tract can vary significantly from the tract median.
+- **Assessed ≠ market value:** The City of Boston assesses property values for tax purposes. Assessed values typically lag behind actual sale prices and may not capture market fluctuations.
+- **No sale price data:** The dataset contains assessed values, not actual transaction prices. A property could sell for significantly more or less than its assessed value.
+- **Top 1% removed:** 1,340 ultra-luxury and large multi-unit properties were removed. All models will underpredict at the very high end.
+- **Location encoded as zip code only:** `ZIP_CODE` has weak correlation with value (r = −0.05) because it's a single integer. With neighborhood dummy variables or latitude/longitude, the models would likely perform much better.
+- **KNN and dimensionality:** KNN uses Euclidean distance across 24 features. Some features may add noise rather than signal, degrading neighbor quality. PCA or feature selection could improve results.
 
 ---
 
@@ -295,7 +292,8 @@ All plots are saved to `plots/` after running `make visualize` and `make train`.
 | `numpy` | Numerical operations and feature transforms |
 | `scikit-learn` | Models, pipelines, scaling, metrics |
 | `matplotlib` | All visualizations |
-| `statsmodels` | Boston Housing Dataset download |
+| `statsmodels` | (retained as dependency) |
+| `requests` | HTTP download with redirect handling |
 | `pytest` | Unit test framework |
 
 ```bash

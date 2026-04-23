@@ -16,43 +16,62 @@ from src.features import create_features
 
 @pytest.fixture
 def sample_raw_df():
-    """Minimal dataframe that mimics the raw Boston Housing dataset."""
+    """Minimal dataframe mimicking the FY2025 Boston Property Assessment dataset."""
     return pd.DataFrame({
-        "crim":    [0.00632, 0.02731, 15.0,   0.05023],  # 15.0 is a top-1% outlier
-        "zn":      [18.0,    0.0,     0.0,    0.0],
-        "indus":   [2.31,    7.07,    7.07,   2.18],
-        "chas":    [0,       0,       0,      0],
-        "nox":     [0.538,   0.469,   0.469,  0.458],
-        "rm":      [6.575,   6.421,   7.185,  6.998],
-        "age":     [65.2,    78.9,    61.1,   45.8],
-        "dis":     [4.09,    4.9671,  4.9671, 6.0622],
-        "rad":     [1,       2,       2,      3],
-        "tax":     [296,     242,     242,    222],
-        "ptratio": [15.3,    17.8,    17.8,   18.7],
-        "b":       [396.9,   396.9,   392.83, 394.63],
-        "lstat":   [4.98,    9.14,    4.03,   2.94],
-        "medv":    [24.0,    21.6,    50.0,   33.4],  # 50.0 is censored
+        "LU":          ["R1", "R1",  "R2",  "E",   "R1",  "R1"],
+        # "E" = tax-exempt (non-residential) → filtered out
+        "ZIP_CODE":    ["02101", "02101", "02102", "02103", "02104", "02105"],
+        "LIVING_AREA": [1200,    1800,    0,       2500,    900,     2100],
+        # 0 LIVING_AREA → removed
+        "LAND_SF":     ["3,000", "4,500", "2,000", "1,000", "2,000", "5,500"],
+        "GROSS_AREA":  [1200,    1800,    2000,    2500,    900,     2100],
+        "BED_RMS":     [3,       4,       2,       2,       2,       3],
+        "FULL_BTH":    [1,       2,       1,       1,       1,       2],
+        "HLF_BTH":     [1,       0,       0,       0,       0,       1],
+        "TT_RMS":      [6,       8,       5,       4,       5,       7],
+        "FIREPLACES":  [1,       2,       0,       0,       0,       1],
+        "NUM_PARKING": [1,       2,       0,       0,       0,       1],
+        "YR_BUILT":    [1920,    1950,    1980,    2000,    1900,    1985],
+        "YR_REMODEL":  [2010,    1950,    2020,    2000,    1900,    2015],
+        "RES_FLOOR":   [2,       3,       2,       10,      1,       2],
+        "OWN_OCC":     ["Y",     "N",     "Y",     "N",     "N",     "Y"],
+        "OVERALL_COND":["G",     "A",     "E",     "G",     "F",     "G"],
+        "TOTAL_VALUE": ["500,000","700,000","300,000","400,000","0",     "450,000"],
+        # 0 TOTAL_VALUE → removed; values stored as comma-formatted strings
+        "LAND_VALUE":  ["200,000","300,000","150,000","200,000","0",     "180,000"],
+        # leakage column → dropped
+        "BLDG_VALUE":  ["300,000","400,000","150,000","200,000","0",     "270,000"],
+        # leakage column → dropped
+        "GROSS_TAX":   ["$5,000", "$7,000", "$3,000", "$4,000", "$0",    "$4,500"],
+        # leakage column → dropped
+        "PID":         ["1",     "2",     "3",     "4",     "5",     "6"],
+        # admin column → dropped
+        "OWNER":       ["John",  "Jane",  "Bob",   "Alice", "City",  "Mark"],
+        # admin column → dropped
     })
 
 
 @pytest.fixture
 def sample_clean_df():
-    """Minimal cleaned Boston dataframe for feature engineering tests."""
+    """Minimal cleaned FY2025 dataframe for feature engineering tests."""
     return pd.DataFrame({
-        "crim":    [0.00632, 0.02731, 0.05023, 0.08829],
-        "zn":      [18.0,    0.0,     0.0,     12.5],
-        "indus":   [2.31,    7.07,    2.18,    7.87],
-        "chas":    [0,       0,       0,       0],
-        "nox":     [0.538,   0.469,   0.458,   0.524],
-        "rm":      [6.575,   6.421,   6.998,   6.012],
-        "age":     [65.2,    78.9,    45.8,    66.6],
-        "dis":     [4.09,    4.9671,  6.0622,  5.5605],
-        "rad":     [1,       2,       3,       5],
-        "tax":     [296,     242,     222,     311],
-        "ptratio": [15.3,    17.8,    18.7,    15.2],
-        "b":       [396.9,   396.9,   394.63,  395.6],
-        "lstat":   [4.98,    9.14,    2.94,    12.43],
-        "medv":    [24.0,    21.6,    33.4,    22.9],
+        "LU":          [1,       2,       1,       5],
+        "ZIPCODE":     [2101,    2102,    2103,    2104],
+        "LIVING_AREA": [1200,    1800,    2500,    900],
+        "LAND_SF":     [3000,    4500,    1000,    2000],
+        "GROSS_AREA":  [1200,    1800,    2500,    900],
+        "BED_RMS":     [3,       4,       2,       2],
+        "FULL_BTH":    [1,       2,       1,       1],
+        "HLF_BTH":     [1,       0,       0,       0],
+        "TT_RMS":      [6,       8,       4,       5],
+        "FIRE_PLACE":  [1,       2,       0,       0],
+        "NUM_PARKING": [1,       2,       0,       0],
+        "YR_BUILT":    [1920,    1950,    2000,    1980],
+        "YR_REMODEL":  [2010,    1950,    2000,    2020],
+        "RES_FLOOR":   [2,       3,       10,      2],
+        "OWN_OCC":     [1,       0,       0,       1],
+        "OVERALL_COND":[4,       3,       5,       4],
+        "TOTAL_VALUE": [500000,  700000,  400000,  350000],
     })
 
 
@@ -62,18 +81,38 @@ def sample_clean_df():
 
 class TestCleanData:
 
-    def test_removes_censored_medv(self, sample_raw_df, tmp_path, monkeypatch):
-        """Rows where medv == 50 (censored values) should be removed."""
+    def test_removes_non_residential(self, sample_raw_df, tmp_path, monkeypatch):
+        """Non-residential LU types (E, C, I, etc.) must be filtered out."""
         self._run_clean(sample_raw_df, tmp_path, monkeypatch)
         result = pd.read_csv(tmp_path / "boston_clean.csv")
-        assert (result["medv"] < 50).all()
+        # LU is encoded as int; non-residential rows were never in the map so they're gone
+        assert len(result) < len(sample_raw_df)
 
-    def test_removes_extreme_crime(self, sample_raw_df, tmp_path, monkeypatch):
-        """Top 1% crime rate outliers should be removed."""
+    def test_removes_zero_total_value(self, sample_raw_df, tmp_path, monkeypatch):
+        """Rows with TOTAL_VALUE == 0 should be removed."""
         self._run_clean(sample_raw_df, tmp_path, monkeypatch)
         result = pd.read_csv(tmp_path / "boston_clean.csv")
-        original_99 = sample_raw_df["crim"].quantile(0.99)
-        assert (result["crim"] <= original_99).all()
+        assert (result["TOTAL_VALUE"] > 0).all()
+
+    def test_removes_zero_living_area(self, sample_raw_df, tmp_path, monkeypatch):
+        """Rows with LIVING_AREA == 0 should be removed."""
+        self._run_clean(sample_raw_df, tmp_path, monkeypatch)
+        result = pd.read_csv(tmp_path / "boston_clean.csv")
+        assert (result["LIVING_AREA"] > 0).all()
+
+    def test_removes_leakage_columns(self, sample_raw_df, tmp_path, monkeypatch):
+        """LAND_VALUE, BLDG_VALUE, GROSS_TAX must not appear in cleaned output."""
+        self._run_clean(sample_raw_df, tmp_path, monkeypatch)
+        result = pd.read_csv(tmp_path / "boston_clean.csv")
+        for col in ["LAND_VALUE", "BLDG_VALUE", "GROSS_TAX"]:
+            assert col not in result.columns, f"Leakage column '{col}' still present"
+
+    def test_removes_admin_columns(self, sample_raw_df, tmp_path, monkeypatch):
+        """Admin columns (PID, OWNER) must not appear in cleaned output."""
+        self._run_clean(sample_raw_df, tmp_path, monkeypatch)
+        result = pd.read_csv(tmp_path / "boston_clean.csv")
+        for col in ["PID", "OWNER"]:
+            assert col not in result.columns, f"Admin column '{col}' still present"
 
     def test_no_missing_values_after_clean(self, sample_raw_df, tmp_path, monkeypatch):
         """Cleaned dataset should have zero missing values."""
@@ -86,11 +125,11 @@ class TestCleanData:
         self._run_clean(sample_raw_df, tmp_path, monkeypatch)
         assert (tmp_path / "boston_clean.csv").exists()
 
-    def test_medv_preserved(self, sample_raw_df, tmp_path, monkeypatch):
-        """Target column medv must still be present after cleaning."""
+    def test_total_value_preserved(self, sample_raw_df, tmp_path, monkeypatch):
+        """Target column TOTAL_VALUE must still be present after cleaning."""
         self._run_clean(sample_raw_df, tmp_path, monkeypatch)
         result = pd.read_csv(tmp_path / "boston_clean.csv")
-        assert "medv" in result.columns
+        assert "TOTAL_VALUE" in result.columns
 
     def test_no_duplicates(self, sample_raw_df, tmp_path, monkeypatch):
         """Cleaned dataset should have no duplicate rows."""
@@ -99,14 +138,14 @@ class TestCleanData:
         assert result.duplicated().sum() == 0
 
     def test_row_count_reduced(self, sample_raw_df, tmp_path, monkeypatch):
-        """Cleaning should remove at least the censored medv==50 row."""
+        """Cleaning should remove at least the non-residential, zero-value, and zero-area rows."""
         self._run_clean(sample_raw_df, tmp_path, monkeypatch)
         result = pd.read_csv(tmp_path / "boston_clean.csv")
         assert len(result) < len(sample_raw_df)
 
     # ── helper ──────────────────────────────────
     def _run_clean(self, df, tmp_path, monkeypatch):
-        raw_path = tmp_path / "boston.csv"
+        raw_path = tmp_path / "fy2025_property_assessment.csv"
         out_path = tmp_path / "boston_clean.csv"
         df.to_csv(raw_path, index=False)
 
@@ -122,79 +161,80 @@ class TestCleanData:
 
 class TestCreateFeatures:
 
-    def test_crime_log_created(self, sample_clean_df):
-        """CRIME_LOG should equal log1p(crim)."""
+    def test_age_created(self, sample_clean_df):
+        """AGE should equal 2025 - YR_BUILT."""
         result = create_features(sample_clean_df)
-        assert "CRIME_LOG" in result.columns
-        expected = np.log1p(sample_clean_df["crim"])
+        assert "AGE" in result.columns
+        expected = 2025 - sample_clean_df["YR_BUILT"]
         pd.testing.assert_series_equal(
-            result["CRIME_LOG"].reset_index(drop=True),
+            result["AGE"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
 
-    def test_room_sq_created(self, sample_clean_df):
-        """ROOM_SQ should equal rm squared."""
+    def test_is_remodeled_created(self, sample_clean_df):
+        """IS_REMODELED should be 1 when YR_REMODEL > YR_BUILT, else 0."""
         result = create_features(sample_clean_df)
-        assert "ROOM_SQ" in result.columns
-        expected = sample_clean_df["rm"] ** 2
+        assert "IS_REMODELED" in result.columns
+        expected = (sample_clean_df["YR_REMODEL"] > sample_clean_df["YR_BUILT"]).astype(int)
         pd.testing.assert_series_equal(
-            result["ROOM_SQ"].reset_index(drop=True),
+            result["IS_REMODELED"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
 
-    def test_tax_per_room_created(self, sample_clean_df):
-        """TAX_PER_ROOM should equal tax / rm."""
+    def test_bath_total_created(self, sample_clean_df):
+        """BATH_TOTAL should equal FULL_BTH + 0.5 * HLF_BTH."""
         result = create_features(sample_clean_df)
-        assert "TAX_PER_ROOM" in result.columns
-        expected = sample_clean_df["tax"] / sample_clean_df["rm"]
+        assert "BATH_TOTAL" in result.columns
+        expected = sample_clean_df["FULL_BTH"] + 0.5 * sample_clean_df["HLF_BTH"]
         pd.testing.assert_series_equal(
-            result["TAX_PER_ROOM"].reset_index(drop=True),
+            result["BATH_TOTAL"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
 
-    def test_lstat_per_room_created(self, sample_clean_df):
-        """LSTAT_PER_ROOM should equal lstat / rm."""
+    def test_log_living_area_created(self, sample_clean_df):
+        """LOG_LIVING_AREA should equal log1p(LIVING_AREA)."""
         result = create_features(sample_clean_df)
-        assert "LSTAT_PER_ROOM" in result.columns
-        expected = sample_clean_df["lstat"] / sample_clean_df["rm"]
+        assert "LOG_LIVING_AREA" in result.columns
+        expected = np.log1p(sample_clean_df["LIVING_AREA"])
         pd.testing.assert_series_equal(
-            result["LSTAT_PER_ROOM"].reset_index(drop=True),
+            result["LOG_LIVING_AREA"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
 
-    def test_pollution_proximity_created(self, sample_clean_df):
-        """POLLUTION_PROXIMITY should equal nox / dis."""
+    def test_log_land_sf_created(self, sample_clean_df):
+        """LOG_LAND_SF should equal log1p(LAND_SF)."""
         result = create_features(sample_clean_df)
-        assert "POLLUTION_PROXIMITY" in result.columns
-        expected = sample_clean_df["nox"] / sample_clean_df["dis"]
+        assert "LOG_LAND_SF" in result.columns
+        expected = np.log1p(sample_clean_df["LAND_SF"])
         pd.testing.assert_series_equal(
-            result["POLLUTION_PROXIMITY"].reset_index(drop=True),
+            result["LOG_LAND_SF"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
 
-    def test_school_index_created(self, sample_clean_df):
-        """SCHOOL_INDEX should equal ptratio * lstat."""
+    def test_area_per_room_created(self, sample_clean_df):
+        """AREA_PER_ROOM should equal LIVING_AREA / TT_RMS."""
         result = create_features(sample_clean_df)
-        assert "SCHOOL_INDEX" in result.columns
-        expected = sample_clean_df["ptratio"] * sample_clean_df["lstat"]
+        assert "AREA_PER_ROOM" in result.columns
+        expected = sample_clean_df["LIVING_AREA"] / sample_clean_df["TT_RMS"]
         pd.testing.assert_series_equal(
-            result["SCHOOL_INDEX"].reset_index(drop=True),
+            result["AREA_PER_ROOM"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
 
-    def test_age_dist_created(self, sample_clean_df):
-        """AGE_DIST should equal age * dis."""
+    def test_bed_bath_created(self, sample_clean_df):
+        """BED_BATH should equal BED_RMS * BATH_TOTAL."""
         result = create_features(sample_clean_df)
-        assert "AGE_DIST" in result.columns
-        expected = sample_clean_df["age"] * sample_clean_df["dis"]
+        assert "BED_BATH" in result.columns
+        bath_total = sample_clean_df["FULL_BTH"] + 0.5 * sample_clean_df["HLF_BTH"]
+        expected = sample_clean_df["BED_RMS"] * bath_total
         pd.testing.assert_series_equal(
-            result["AGE_DIST"].reset_index(drop=True),
+            result["BED_BATH"].reset_index(drop=True),
             expected.reset_index(drop=True),
             check_names=False
         )
@@ -237,6 +277,6 @@ class TestCreateFeatures:
         monkeypatch.setattr(feat, "OUTPUT_PATH", str(out_path))
         feat.main()
         result = pd.read_csv(out_path)
-        for col in ["CRIME_LOG", "ROOM_SQ", "TAX_PER_ROOM", "LSTAT_PER_ROOM",
-                    "POLLUTION_PROXIMITY", "SCHOOL_INDEX", "AGE_DIST"]:
+        for col in ["AGE", "IS_REMODELED", "BATH_TOTAL", "LOG_LIVING_AREA",
+                    "LOG_LAND_SF", "AREA_PER_ROOM", "BED_BATH"]:
             assert col in result.columns, f"Missing engineered column: {col}"

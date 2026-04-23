@@ -7,7 +7,7 @@ from src.zillow_analysis import main as run_zillow_analysis
 
 
 def main():
-    print("Step 1: Collecting Boston Housing data...")
+    print("Step 1: Collecting Boston Property Assessment FY2025 data...")
     collect_data()
 
     print("\nStep 2: Cleaning data...")

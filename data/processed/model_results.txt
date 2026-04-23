@@ -1,28 +1,28 @@
-Boston Housing Price Prediction — Model Results
+Boston Property Assessment FY2025 — Model Results
 ============================================================
 
-Dataset shape: (485, 20)
-Training set: (388, 19)   Test set: (97, 19)
+Dataset shape: (132611, 25)
+Training set: (106088, 24)   Test set: (26523, 24)
 
 Story: linear baseline → regularization → non-linear → distance-based
 ------------------------------------------------------------
-Linear Regression          MAE=  2.27  RMSE=  2.92  R²=0.8469
+Linear Regression          MAE=   253,069  RMSE=   388,393  R²=0.5087
   → Baseline. Fits a global plane through all features. No regularization.
 
-Ridge Regression           MAE=  2.34  RMSE=  3.01  R²=0.8373
+Ridge Regression           MAE=   253,046  RMSE=   388,391  R²=0.5087
   → Adds L2 penalty — shrinks correlated coefficients, reduces overfitting.
 
-Lasso Regression           MAE=  2.40  RMSE=  3.07  R²=0.8311
+Lasso Regression           MAE=   252,134  RMSE=   388,520  R²=0.5084
   → Adds L1 penalty — forces some coefficients to zero (implicit feature selection).
 
-Decision Tree              MAE=  2.55  RMSE=  3.53  R²=0.7766
+Decision Tree              MAE=   203,991  RMSE=   304,670  R²=0.6977
   → Splits on single features. Captures non-linearity but high variance.
 
-KNN (k=10)                 MAE=  2.28  RMSE=  3.07  R²=0.8304
-  → Predicts from the 10 nearest neighborhoods by Euclidean distance.
+KNN (k=10)                 MAE=   173,639  RMSE=   293,096  R²=0.7202
+  → Predicts from the 10 nearest properties by Euclidean distance.
 
 ------------------------------------------------------------
-Best model (lowest RMSE): Linear Regression
-  MAE:  2.27
-  RMSE: 2.92
-  R²:   0.8469
+Best model (lowest RMSE): KNN (k=10)
+  MAE:  $173,639
+  RMSE: $293,096
+  R²:   0.7202

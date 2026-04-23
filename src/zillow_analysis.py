@@ -39,11 +39,11 @@ def main():
     boston_long = boston_long.dropna(subset=["Date", "MedianSalePrice"])
     boston_long = boston_long.sort_values("Date").reset_index(drop=True)
 
-    # Time-based features for potential trend modeling
+    # Derived time columns saved to processed CSV for reference — Zillow data is context only, not used in modeling
     boston_long["Year"] = boston_long["Date"].dt.year
     boston_long["Month"] = boston_long["Date"].dt.month
     boston_long["Quarter"] = boston_long["Date"].dt.quarter
-    boston_long["TimeIndex"] = range(len(boston_long))  # integer index for linear trend fitting
+    boston_long["TimeIndex"] = range(len(boston_long))  # sequential integer for charting
     boston_long["PriceGrowth"] = boston_long["MedianSalePrice"].pct_change()
     boston_long["RollingMean3"] = boston_long["MedianSalePrice"].rolling(window=3).mean()
     boston_long["RollingMean12"] = boston_long["MedianSalePrice"].rolling(window=12).mean()
