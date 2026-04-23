@@ -34,15 +34,19 @@ def main():
     print("Saved: target_distribution.png")
 
     # Living area vs value (strongest numeric predictor)
-    corr_area = df["LIVING_AREA"].corr(df["TOTAL_VALUE"])
+    # Cap at 5,000 sq ft — R4 multi-family buildings reach 43k sq ft (whole-building total),
+    # which would compress 99% of residential data into an unreadable bottom-left cluster
+    AREA_CAP = 5_000
+    df_area = df[df["LIVING_AREA"] <= AREA_CAP]
+    corr_area = df_area["LIVING_AREA"].corr(df_area["TOTAL_VALUE"])
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.scatter(df["LIVING_AREA"], df["TOTAL_VALUE"] / 1_000, alpha=0.3, s=8, color="#4878CF")
-    m, b = np.polyfit(df["LIVING_AREA"], df["TOTAL_VALUE"] / 1_000, 1)
-    x_line = np.linspace(df["LIVING_AREA"].min(), df["LIVING_AREA"].max(), 100)
+    ax.scatter(df_area["LIVING_AREA"], df_area["TOTAL_VALUE"] / 1_000, alpha=0.3, s=8, color="#4878CF")
+    m, b = np.polyfit(df_area["LIVING_AREA"], df_area["TOTAL_VALUE"] / 1_000, 1)
+    x_line = np.linspace(df_area["LIVING_AREA"].min(), df_area["LIVING_AREA"].max(), 100)
     ax.plot(x_line, m * x_line + b, color="red", linewidth=1.5, label="Trend line")
     ax.set_xlabel("Living Area (sq ft)")
     ax.set_ylabel("Total Assessed Value ($1,000s)")
-    ax.set_title(f"Living Area vs Assessed Value  (r = {corr_area:.2f})")
+    ax.set_title(f"Living Area vs Assessed Value  (r = {corr_area:.2f}, LIVING_AREA ≤ {AREA_CAP:,} sq ft)")
     ax.legend()
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/scatter_area_vs_value.png", dpi=100)
@@ -50,15 +54,19 @@ def main():
     print("Saved: scatter_area_vs_value.png")
 
     # Bedrooms vs value
-    corr_beds = df["BED_RMS"].corr(df["TOTAL_VALUE"])
+    # Cap at 8 — R4 multi-family buildings record total bedrooms across all units,
+    # so a 4-family with 5 beds each shows as 20, distorting the trend line
+    BED_CAP = 8
+    df_beds = df[df["BED_RMS"] <= BED_CAP]
+    corr_beds = df_beds["BED_RMS"].corr(df_beds["TOTAL_VALUE"])
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.scatter(df["BED_RMS"], df["TOTAL_VALUE"] / 1_000, alpha=0.3, s=8, color="#D65F5F")
-    m, b = np.polyfit(df["BED_RMS"], df["TOTAL_VALUE"] / 1_000, 1)
-    x_line = np.linspace(df["BED_RMS"].min(), df["BED_RMS"].max(), 100)
+    ax.scatter(df_beds["BED_RMS"], df_beds["TOTAL_VALUE"] / 1_000, alpha=0.3, s=8, color="#D65F5F")
+    m, b = np.polyfit(df_beds["BED_RMS"], df_beds["TOTAL_VALUE"] / 1_000, 1)
+    x_line = np.linspace(df_beds["BED_RMS"].min(), df_beds["BED_RMS"].max(), 100)
     ax.plot(x_line, m * x_line + b, color="black", linewidth=1.5, label="Trend line")
     ax.set_xlabel("Number of Bedrooms")
     ax.set_ylabel("Total Assessed Value ($1,000s)")
-    ax.set_title(f"Bedrooms vs Assessed Value  (r = {corr_beds:.2f})")
+    ax.set_title(f"Bedrooms vs Assessed Value  (r = {corr_beds:.2f}, BED_RMS ≤ {BED_CAP})")
     ax.legend()
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/scatter_beds_vs_value.png", dpi=100)

@@ -4,7 +4,7 @@ import os
 RAW_DATA_PATH = "data/raw/fy2025_property_assessment.csv"
 PROCESSED_DATA_PATH = "data/processed/boston_clean.csv"
 
-# Residential land use codes — exclude commercial, industrial, tax-exempt, etc.
+# Residential land use codes — exclude commercial, industrial, tax-exempt, CD = Residential Condominium Unit , 73,394 records out of 183,445 totaletc.
 RESIDENTIAL_LU = {"R1", "R2", "R3", "R4", "CD"}
 
 # Leakage: LAND_VALUE + BLDG_VALUE = TOTAL_VALUE; GROSS_TAX and SFYI_VALUE are derived from it

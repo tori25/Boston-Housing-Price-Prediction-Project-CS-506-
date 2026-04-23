@@ -177,8 +177,10 @@ def main():
     print("Saved: decision_tree.png")
 
     # K-Means: exploration only — segments properties by size and bedroom count
+    # Cap at 5,000 sq ft so multi-family outliers don't collapse all clusters into the left edge
     cluster_features = ["LIVING_AREA", "BED_RMS"]
     df_cluster = df[cluster_features + [TARGET_COLUMN]].dropna().copy()
+    df_cluster = df_cluster[df_cluster["LIVING_AREA"] <= 5_000]
 
     scaler = StandardScaler()
     X_cluster = scaler.fit_transform(df_cluster[cluster_features])
