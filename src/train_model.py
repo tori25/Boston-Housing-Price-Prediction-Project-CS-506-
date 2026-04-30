@@ -10,6 +10,7 @@ from sklearn.tree import DecisionTreeRegressor, plot_tree
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -232,19 +233,48 @@ def main():
 
     # K-Means: exploration only — segments properties by size and bedroom count
     # Cap at 5,000 sq ft so multi-family outliers don't collapse all clusters into the left edge
+    print("Running K-Means clustering...")
     cluster_features = ["LIVING_AREA", "BED_RMS"]
     df_cluster = df[cluster_features + [TARGET_COLUMN]].dropna().copy()
     df_cluster = df_cluster[df_cluster["LIVING_AREA"] <= 5_000]
+    df_cluster = df_cluster.sample(n=10000, random_state=42)
 
     scaler = StandardScaler()
     X_cluster = scaler.fit_transform(df_cluster[cluster_features])
 
-    kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+    k_range = range(2, 11)
+    inertias = []
+    sil_scores = []
+    for k in k_range:
+        km = KMeans(n_clusters=k, random_state=42, n_init=5)
+        labels = km.fit_predict(X_cluster)
+        inertias.append(km.inertia_)
+        sil_scores.append(silhouette_score(X_cluster, labels))
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    ax1.plot(list(k_range), inertias, marker="o", color="#4878CF")
+    ax1.set_xlabel("Number of Clusters (k)")
+    ax1.set_ylabel("Inertia")
+    ax1.set_title("Elbow Method")
+    ax2.plot(list(k_range), sil_scores, marker="o", color="#6ACC65")
+    ax2.set_xlabel("Number of Clusters (k)")
+    ax2.set_ylabel("Silhouette Score")
+    ax2.set_title("Silhouette Score")
+    plt.tight_layout()
+    plt.savefig(f"{PLOTS_DIR}/kmeans_elbow_silhouette.png", dpi=100)
+    plt.close()
+    print("Saved: kmeans_elbow_silhouette.png")
+
+    best_k = int(k_range.start + sil_scores.index(max(sil_scores)))
+    print(f"Best k by silhouette score: {best_k}")
+
+    kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
     df_cluster["Cluster"] = kmeans.fit_predict(X_cluster)
 
-    cluster_colors = ["#D65F5F", "#4878CF", "#6ACC65", "#E8A838"]
+    cluster_colors = ["#D65F5F", "#4878CF", "#6ACC65", "#E8A838", "#9B59B6",
+                      "#F39C12", "#1ABC9C", "#E74C3C", "#3498DB", "#2ECC71"]
     fig, ax = plt.subplots(figsize=(9, 6))
-    for cluster_id in range(4):
+    for cluster_id in range(best_k):
         mask = df_cluster["Cluster"] == cluster_id
         ax.scatter(
             df_cluster.loc[mask, "LIVING_AREA"],
@@ -256,7 +286,7 @@ def main():
         )
     ax.set_xlabel("Living Area (sq ft)")
     ax.set_ylabel("Total Assessed Value ($1,000s)")
-    ax.set_title("K-Means Clustering (k=4): Boston Property Segments")
+    ax.set_title(f"K-Means Clustering (k={best_k}): Boston Property Segments")
     ax.legend(title="Cluster")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/kmeans_clusters.png", dpi=100)
@@ -279,6 +309,7 @@ def main():
     plt.savefig(f"{PLOTS_DIR}/coefficient_plot.png", dpi=100)
     plt.close()
     print("Saved: coefficient_plot.png")
+    print("K-Means finished.")
 
     # Random Forest feature importances — top 20 so ZIP dummies don't crowd out the signal
     rf_model = models["Random Forest"]

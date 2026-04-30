@@ -218,7 +218,18 @@ Ensemble of 200 decision trees, each trained on a bootstrap sample with a random
 The optimal number of neighbors `k` is selected automatically by 5-fold cross-validation over `k ∈ {3, 5, 7, 10, 15, 20, 30, 50}` before training. The best k is chosen by lowest CV RMSE. Predicts by averaging the k most similar properties by Euclidean distance.
 
 ### K-Means clustering (exploration only)
-Groups Boston properties into 4 segments based on `LIVING_AREA` and `BED_RMS`. Not used for prediction — reveals natural market tiers.
+Groups Boston properties into segments based on `LIVING_AREA` and `BED_RMS`. Not used for prediction — reveals natural market tiers. Features are standardized with `StandardScaler` before clustering so neither variable dominates by scale. A 10,000-property random sample (capped at 5,000 sq ft to prevent multi-family outliers from collapsing all clusters to the left edge) is used for speed.
+
+**Choosing k — Elbow Method & Silhouette Score**
+
+Both diagnostics are run over k ∈ {2, 3, …, 10}:
+
+| Diagnostic | What it measures | How to read it |
+|------------|-----------------|----------------|
+| **Elbow Method** (inertia) | Total squared distance from each point to its cluster centroid | Plot inertia vs k; pick the k where the curve bends sharply ("the elbow") — adding more clusters past that point gives diminishing returns |
+| **Silhouette Score** | How similar each point is to its own cluster vs the nearest other cluster. Range: [−1, 1] | Higher = tighter, better-separated clusters. Pick the k with the highest score |
+
+The final k is chosen by **highest silhouette score**. Both diagnostic curves are saved to `plots/kmeans_elbow_silhouette.png`. The cluster scatter plot (Living Area vs Assessed Value, colored by cluster) is saved to `plots/kmeans_clusters.png`.
 
 ---
 
@@ -275,7 +286,8 @@ All plots saved to `plots/` after running `make visualize` and `make train`.
 | `decision_tree.png` | Modeling | Decision tree structure (top 2 levels) |
 | `knn_tuning.png` | Modeling | KNN cross-validation: k vs CV RMSE curve with best k marked |
 | `rf_feature_importance.png` | Modeling | Random Forest top 20 feature importances (mean decrease in impurity) |
-| `kmeans_clusters.png` | Modeling | K-Means (k=4) Boston property market segments |
+| `kmeans_elbow_silhouette.png` | Modeling | Elbow Method (inertia) and Silhouette Score curves for k = 2–10, used to select optimal k |
+| `kmeans_clusters.png` | Modeling | K-Means Boston property market segments (k chosen by highest silhouette score) |
 | `zillow_boston_trend.png` | Context | Boston median sale price trend over time (Zillow 2018–2026) |
 
 ---
