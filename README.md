@@ -76,7 +76,7 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs all 22 tests autom
 
 Predict **`TOTAL_VALUE`** — the total assessed value of a residential property in Boston — using the City of Boston's FY2025 Property Assessment dataset, downloaded from [data.boston.gov](https://data.boston.gov/dataset/property-assessment).
 
-The dataset contains **183,445 property records** (as of December 2024) covering all taxable and non-taxable parcels in the City of Boston. After filtering to residential properties and cleaning, the modeling dataset contains **132,611 rows × 24 features**. Unlike the classic 1978 Boston Housing Dataset which described census-tract averages, this dataset contains actual individual property records — each row is one house, condo, or apartment building.
+The dataset contains **183,445 property records** (as of December 2024) covering all taxable and non-taxable parcels in the City of Boston. After filtering to residential properties and cleaning, the modeling dataset contains **132,611 rows × 52 features** (16 original + 4 engineered + 32 ZIP one-hot encoded columns). Unlike the classic 1978 Boston Housing Dataset which described census-tract averages, this dataset contains actual individual property records — each row is one house, condo, or apartment building.
 
 Performance is measured with **MAE**, **RMSE**, and **R²**. All error values are in dollars.
 
@@ -105,7 +105,7 @@ Implemented in `src/collect_data.py`.
 | `YR_REMODEL` | Year property was last remodeled |
 | `RES_FLOOR` | Number of residential stories |
 | `LU` | Land use type (R1/R2/R3/R4/CD) — encoded as 1–5 |
-| `ZIP_CODE` | Zip code of parcel |
+| `ZIP_CODE` | Zip code of parcel — one-hot encoded into 32 binary columns during feature engineering |
 | `OWN_OCC` | Owner-occupied (Y=1, N=0) |
 | `OVERALL_COND` | Overall condition (E=5, G=4, A=3, F=2, P=1) |
 | `TOTAL_VALUE` | **Target** — Total assessed value in dollars |
@@ -164,9 +164,9 @@ Implemented in `src/clean_data.py`. Final cleaned dataset: **132,611 rows × 18 
 
 ## Feature Extraction
 
-Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**132,611 rows × 25 columns** — 18 original + 7 engineered).
+Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (**132,611 rows × 53 columns** — 16 original + 4 engineered + 32 ZIP dummy columns + target).
 
-### Feature correlations with TOTAL_VALUE
+### Feature correlations with TOTAL_VALUE (original features)
 
 | Feature | Correlation | Notes |
 |---------|------------|-------|
@@ -180,28 +180,27 @@ Implemented in `src/features.py`. Output: `data/processed/train_features.csv` (*
 | `OVERALL_COND` | +0.236 | Condition grade |
 | `HLF_BTH` | +0.226 | Half baths |
 | `LAND_SF` | +0.101 | Lot size — weaker than interior space |
-| `ZIP_CODE` | −0.051 | Slight negative (lower zip codes in higher-value neighborhoods) |
+| `ZIP_CODE` | −0.051 | Weak as a raw integer — replaced by 32 one-hot dummies in feature engineering |
 
 ### Engineered features
 
 | Feature | Formula | Rationale |
 |---------|---------|-----------|
-| `AGE` | `2025 − YR_BUILT` | Older buildings tend to be worth less; computable and interpretable |
+| `AGE` | `2025 − YR_BUILT` | Older buildings tend to be worth less. `YR_BUILT` is dropped after this to eliminate perfect collinearity. |
 | `IS_REMODELED` | `1 if YR_REMODEL > YR_BUILT` | Binary flag for renovation — remodeled properties command a premium |
 | `BATH_TOTAL` | `FULL_BTH + 0.5 × HLF_BTH` | Weighted bath count; half baths add value but less than full baths |
-| `LOG_LIVING_AREA` | `log(1 + LIVING_AREA)` | Living area is right-skewed — log compresses the tail |
-| `LOG_LAND_SF` | `log(1 + LAND_SF)` | Lot size is right-skewed |
 | `AREA_PER_ROOM` | `LIVING_AREA / TT_RMS` | Average room size — larger rooms signal higher quality |
 | `BED_BATH` | `BED_RMS × BATH_TOTAL` | Combined bedroom/bath count — luxury homes score high on both |
+| `ZIP_XXXXX` | One-hot encoding of `ZIP_CODE` | 32 binary columns, one per ZIP code. Treats each neighborhood as a distinct category rather than an arbitrary number, giving linear models explicit neighborhood coefficients. `ZIP_CODE` is dropped after encoding. |
 
 ---
 
 ## Modeling Methods
 
-Implemented in `src/train_model.py`. All models trained on an **80/20 train/test split** (`random_state=42`, 106,088 training / 26,523 test). Linear models and KNN wrapped in a `StandardScaler` pipeline; Decision Tree operates on raw values.
+Implemented in `src/train_model.py`. Data split 80/20 (`random_state=42`, 106,088 training / 26,523 test). All reported metrics use **5-fold cross-validation on the training set** (mean ± std), which gives more reliable estimates than a single split. Final models are then fit on the full training set for diagnostic plots. Linear models and KNN are wrapped in a `StandardScaler` pipeline; Decision Tree and Random Forest operate on raw values (tree-based models are scale-invariant).
 
 ### Linear Regression (baseline)
-Fits a global hyperplane through all 24 features. No regularization.
+Fits a global hyperplane through all 55 features. No regularization.
 
 ### Ridge Regression
 Adds L2 penalty to shrink correlated coefficients. Several features are correlated (e.g., `LIVING_AREA` and `GROSS_AREA`, `BED_RMS` and `TT_RMS`).
@@ -212,8 +211,11 @@ Adds L1 penalty that forces some coefficients to zero — implicit feature selec
 ### Decision Tree
 Splits on individual features recursively. `max_depth=5`, `min_samples_leaf=5`. Captures non-linear relationships that linear models miss.
 
-### KNN (k=10)
-Predicts by averaging the 10 most similar properties by Euclidean distance. No parametric assumptions — purely local similarity. Naturally captures neighborhood effects since nearby properties have similar features.
+### Random Forest
+Ensemble of 200 decision trees, each trained on a bootstrap sample with a random subset of features (`max_features="sqrt"`). Averaging across trees reduces variance without increasing bias. Trained with `n_jobs=-1` (all CPU cores). No scaling required.
+
+### KNN (k tuned by CV)
+The optimal number of neighbors `k` is selected automatically by 5-fold cross-validation over `k ∈ {3, 5, 7, 10, 15, 20, 30, 50}` before training. The best k is chosen by lowest CV RMSE. Predicts by averaging the k most similar properties by Euclidean distance.
 
 ### K-Means clustering (exploration only)
 Groups Boston properties into 4 segments based on `LIVING_AREA` and `BED_RMS`. Not used for prediction — reveals natural market tiers.
@@ -222,31 +224,36 @@ Groups Boston properties into 4 segments based on `LIVING_AREA` and `BED_RMS`. N
 
 ## Results
 
-| Model | MAE | RMSE | R² | vs. Baseline (RMSE) |
-|-------|-----|------|----|---------------------|
-| Linear Regression | $253,069 | $388,393 | 0.509 | — baseline |
-| Ridge Regression | $253,046 | $388,391 | 0.509 | ≈ same |
-| Lasso Regression | $253,068 | $388,388 | 0.509 | ≈ same |
-| Decision Tree | $203,991 | $304,670 | 0.698 | −$83,723 |
-| **KNN (k=10)** | **$173,639** | **$293,096** | **0.720** | **−$95,297** |
+All metrics from **5-fold cross-validation on the training set** (mean ± std). Best per metric in bold.
 
-*All error values in dollars. Best per metric in bold.*
+| Model | MAE | RMSE | R² |
+|-------|-----|------|----|
+| Linear Regression | $189,898 ± $2,079 | $297,010 ± $17,067 | 0.696 ± 0.039 |
+| Ridge Regression | $189,867 ± $2,077 | $297,012 ± $17,072 | 0.696 ± 0.039 |
+| Lasso Regression | $188,347 ± $1,950 | $296,636 ± $15,227 | 0.697 ± 0.035 |
+| Decision Tree | $233,759 ± $872 | $359,124 ± $1,549 | 0.557 ± 0.011 |
+| KNN (k=5, CV-tuned) | $108,283 ± $1,276 | $187,460 ± $2,740 | 0.879 ± 0.003 |
+| **Random Forest** | **$102,208 ± $1,194** | **$176,096 ± $1,927** | **0.894 ± 0.003** |
 
-### Best model: KNN (k=10)
+*All error values in dollars.*
 
-**KNN (k=10)** achieved the best result on all three metrics — lowest RMSE ($293k), lowest MAE ($174k), and highest R² (0.720). On average, predictions are within **$174,000** of the true assessed value.
+### Best model: Random Forest
 
-### Why KNN beats linear regression on this dataset
+**Random Forest** achieved the best result on all three metrics — lowest RMSE ($176k), lowest MAE ($102k), and highest R² (0.894). On average, predictions are within **$102,000** of the true assessed value. The tiny standard deviation (±0.003 R²) across folds confirms it is consistent and not sensitive to which subset of data it trains on.
 
-**Linear Regression (R²=0.51)** fits a single global plane: if Living Area increases by 100 sq ft, the model always adds the same dollar amount, regardless of the property's location or type. That assumption is wrong for real estate — an extra 100 sq ft in Beacon Hill adds far more value than in East Boston.
+### Why Random Forest wins
 
-**KNN (R²=0.72)** has no such assumption. It finds the 10 most similar properties (same zip code range, similar size, similar bedrooms) and averages their values. This naturally captures local market variation without needing to model it explicitly.
+**Linear Regression (R²=0.696)** fits a single global plane: if Living Area increases by 100 sq ft, the model adds the same dollar amount everywhere, regardless of neighborhood or property type. Adding ZIP code one-hot encoding improved this significantly from R²=0.509, but a flat plane still cannot capture non-linear interactions.
 
-**Decision Tree (R²=0.70)** also outperforms linear models by creating different prediction rules for different property segments — e.g., "if LIVING_AREA > 2,000 and FULL_BTH > 2 then predict $X". But it's slightly noisier than KNN at depth=5.
+**Decision Tree (R²=0.557)** captures non-linearity but is limited to depth=5 and a single tree — high variance on held-out folds.
+
+**KNN (R²=0.879, k=5 auto-tuned)** outperforms linear models by finding the 5 most similar properties and averaging their values, naturally capturing local market variation. Optimal k was selected by cross-validation from {3, 5, 7, 10, 15, 20, 30, 50}.
+
+**Random Forest (R²=0.894)** builds 200 decision trees, each on a different bootstrap sample and random feature subset. Averaging across trees eliminates individual tree variance while retaining the ability to model non-linear interactions and neighborhood-level effects. It implicitly learns that LIVING_AREA matters differently in Back Bay vs. Hyde Park without explicit interaction features.
 
 ### What this tells us about the data
 
-Boston property values are **highly local and non-linear** — the same square footage is worth very different amounts depending on neighborhood and property type. Linear models cannot capture this without neighborhood-level dummy variables. KNN captures it implicitly by finding similar properties.
+Boston property values are **highly local and non-linear**. The same square footage is worth very different amounts depending on neighborhood and property type. Encoding ZIP codes as 32 one-hot features (rather than a single integer) gave linear models neighborhood-level coefficients and improved their R² from 0.51 → 0.70. Random Forest improved further to 0.894 by learning complex interactions between location, size, and property type.
 
 ---
 
@@ -261,11 +268,13 @@ All plots saved to `plots/` after running `make visualize` and `make train`.
 | `scatter_beds_vs_value.png` | EDA | Bedrooms vs assessed value scatter |
 | `boxplot_lu_vs_value.png` | EDA | Property type (R1/R2/R3/R4/CD) vs assessed value |
 | `correlation_heatmap.png` | EDA | Full feature correlation matrix |
-| `model_comparison.png` | Modeling | Bar chart comparing MAE, RMSE, and R² across all 5 models |
-| `actual_vs_predicted.png` | Modeling | Actual vs predicted assessed values (best model: KNN) |
-| `residual_plot.png` | Modeling | Prediction error vs predicted value (best model: KNN) |
+| `model_comparison.png` | Modeling | Bar chart (with ± std error bars) comparing MAE, RMSE, and R² across all 6 models |
+| `actual_vs_predicted.png` | Modeling | Actual vs predicted assessed values (best model: Random Forest) |
+| `residual_plot.png` | Modeling | Prediction error vs predicted value (best model: Random Forest) |
 | `coefficient_plot.png` | Modeling | Linear Regression coefficients by feature |
 | `decision_tree.png` | Modeling | Decision tree structure (top 2 levels) |
+| `knn_tuning.png` | Modeling | KNN cross-validation: k vs CV RMSE curve with best k marked |
+| `rf_feature_importance.png` | Modeling | Random Forest top 20 feature importances (mean decrease in impurity) |
 | `kmeans_clusters.png` | Modeling | K-Means (k=4) Boston property market segments |
 | `zillow_boston_trend.png` | Context | Boston median sale price trend over time (Zillow 2018–2026) |
 
@@ -276,8 +285,8 @@ All plots saved to `plots/` after running `make visualize` and `make train`.
 - **Assessed ≠ market value:** The City of Boston assesses property values for tax purposes. Assessed values typically lag behind actual sale prices and may not capture market fluctuations.
 - **No sale price data:** The dataset contains assessed values, not actual transaction prices. A property could sell for significantly more or less than its assessed value.
 - **Top 1% removed:** 1,340 ultra-luxury and large multi-unit properties were removed. All models will underpredict at the very high end.
-- **Location encoded as zip code only:** `ZIP_CODE` has weak correlation with value (r = −0.05) because it's a single integer. With neighborhood dummy variables or latitude/longitude, the models would likely perform much better.
-- **KNN and dimensionality:** KNN uses Euclidean distance across 24 features. Some features may add noise rather than signal, degrading neighbor quality. PCA or feature selection could improve results.
+- **Location encoded at ZIP code granularity:** ZIP codes are used as the neighborhood proxy (32 one-hot columns). Finer-grained location data such as latitude/longitude or official Boston neighborhood boundaries could improve predictions further.
+- **KNN and dimensionality:** KNN uses Euclidean distance across 55 features including 32 ZIP dummies. Some features may add noise rather than signal, degrading neighbor quality. PCA or feature selection could improve results.
 
 ---
 

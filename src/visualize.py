@@ -58,7 +58,7 @@ def main():
     # so a 4-family with 5 beds each shows as 20, distorting the trend line
     BED_CAP = 8
     df_beds = df[df["BED_RMS"] <= BED_CAP]
-    corr_beds = df_beds["BED_RMS"].corr(df_beds["TOTAL_VALUE"])
+    corr_beds = df["BED_RMS"].corr(df["TOTAL_VALUE"])  # full dataset, not the capped subset
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.scatter(df_beds["BED_RMS"], df_beds["TOTAL_VALUE"] / 1_000, alpha=0.3, s=8, color="#D65F5F")
     m, b = np.polyfit(df_beds["BED_RMS"], df_beds["TOTAL_VALUE"] / 1_000, 1)
@@ -105,7 +105,7 @@ def main():
             ax.text(j, i, f"{corr.iloc[i, j]:.2f}",
                     ha="center", va="center", fontsize=6,
                     color="white" if abs(corr.iloc[i, j]) > 0.6 else "black")  # white text on dark cells
-    ax.set_title("Feature Correlation Heatmap (FY2025)")
+    ax.set_title("Feature Correlation Heatmap — Original Cleaned Features (before ZIP encoding)")
     plt.tight_layout()
     plt.savefig(f"{PLOTS_DIR}/correlation_heatmap.png", dpi=100)
     plt.close()

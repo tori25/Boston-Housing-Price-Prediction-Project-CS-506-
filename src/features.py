@@ -11,29 +11,22 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
     created_features = []
 
     # 2025 - YR_BUILT — older buildings tend to command lower prices
+    # YR_BUILT is dropped afterwards to avoid perfect collinearity with AGE
     if "YR_BUILT" in df.columns:
         df["AGE"] = 2025 - df["YR_BUILT"]
+        df = df.drop(columns=["YR_BUILT"])
         created_features.append("AGE")
 
     # 1 if property was remodeled after original construction, 0 if never touched
-    if {"YR_BUILT", "YR_REMODEL"}.issubset(df.columns):
-        df["IS_REMODELED"] = (df["YR_REMODEL"] > df["YR_BUILT"]).astype(int)
+    if {"AGE", "YR_REMODEL"}.issubset(df.columns):
+        yr_built_equiv = 2025 - df["AGE"]
+        df["IS_REMODELED"] = (df["YR_REMODEL"] > yr_built_equiv).astype(int)
         created_features.append("IS_REMODELED")
 
     # FULL_BTH + 0.5 * HLF_BTH — weighted bath count; half baths add less value
     if {"FULL_BTH", "HLF_BTH"}.issubset(df.columns):
         df["BATH_TOTAL"] = df["FULL_BTH"] + 0.5 * df["HLF_BTH"]
         created_features.append("BATH_TOTAL")
-
-    # log(LIVING_AREA) — square footage is right-skewed; log compresses the tail
-    if "LIVING_AREA" in df.columns:
-        df["LOG_LIVING_AREA"] = np.log1p(df["LIVING_AREA"])
-        created_features.append("LOG_LIVING_AREA")
-
-    # log(LAND_SF) — lot size is right-skewed
-    if "LAND_SF" in df.columns:
-        df["LOG_LAND_SF"] = np.log1p(df["LAND_SF"])
-        created_features.append("LOG_LAND_SF")
 
     # LIVING_AREA / TT_RMS — average room size; larger rooms signal higher quality
     if {"LIVING_AREA", "TT_RMS"}.issubset(df.columns):
@@ -45,6 +38,18 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
     if {"BED_RMS", "BATH_TOTAL"}.issubset(df.columns):
         df["BED_BATH"] = df["BED_RMS"] * df["BATH_TOTAL"]
         created_features.append("BED_BATH")
+
+    # ZIP codes are nominal categories, not ordinal numbers — one-hot encode them
+    # so each ZIP gets its own coefficient instead of implying 02199 > 02101
+    if "ZIP_CODE" in df.columns:
+        zip_dummies = pd.get_dummies(
+            df["ZIP_CODE"].fillna(0).astype(int).astype(str),
+            prefix="ZIP",
+            drop_first=True,
+        ).astype(int)
+        df = df.drop(columns=["ZIP_CODE"])
+        df = pd.concat([df, zip_dummies], axis=1)
+        created_features.append(f"ZIP_dummies({len(zip_dummies.columns)})")
 
     print(f"Created {len(created_features)} features: {created_features}")
     return df

@@ -194,28 +194,6 @@ class TestCreateFeatures:
             check_names=False
         )
 
-    def test_log_living_area_created(self, sample_clean_df):
-        """LOG_LIVING_AREA should equal log1p(LIVING_AREA)."""
-        result = create_features(sample_clean_df)
-        assert "LOG_LIVING_AREA" in result.columns
-        expected = np.log1p(sample_clean_df["LIVING_AREA"])
-        pd.testing.assert_series_equal(
-            result["LOG_LIVING_AREA"].reset_index(drop=True),
-            expected.reset_index(drop=True),
-            check_names=False
-        )
-
-    def test_log_land_sf_created(self, sample_clean_df):
-        """LOG_LAND_SF should equal log1p(LAND_SF)."""
-        result = create_features(sample_clean_df)
-        assert "LOG_LAND_SF" in result.columns
-        expected = np.log1p(sample_clean_df["LAND_SF"])
-        pd.testing.assert_series_equal(
-            result["LOG_LAND_SF"].reset_index(drop=True),
-            expected.reset_index(drop=True),
-            check_names=False
-        )
-
     def test_area_per_room_created(self, sample_clean_df):
         """AREA_PER_ROOM should equal LIVING_AREA / TT_RMS."""
         result = create_features(sample_clean_df)
@@ -240,9 +218,11 @@ class TestCreateFeatures:
         )
 
     def test_original_columns_preserved(self, sample_clean_df):
-        """create_features should not drop any original columns."""
+        """create_features should preserve original columns except YR_BUILT (replaced by AGE)."""
         result = create_features(sample_clean_df)
         for col in sample_clean_df.columns:
+            if col == "YR_BUILT":
+                continue  # intentionally dropped — replaced by AGE
             assert col in result.columns
 
     def test_no_mutation_of_input(self, sample_clean_df):
@@ -268,7 +248,7 @@ class TestCreateFeatures:
         assert out_path.exists()
 
     def test_output_file_has_engineered_columns(self, sample_clean_df, tmp_path, monkeypatch):
-        """Output CSV from features.py should contain all 7 engineered feature columns."""
+        """Output CSV from features.py should contain all 5 engineered feature columns."""
         import src.features as feat
         in_path = tmp_path / "boston_clean.csv"
         out_path = tmp_path / "train_features.csv"
@@ -277,6 +257,5 @@ class TestCreateFeatures:
         monkeypatch.setattr(feat, "OUTPUT_PATH", str(out_path))
         feat.main()
         result = pd.read_csv(out_path)
-        for col in ["AGE", "IS_REMODELED", "BATH_TOTAL", "LOG_LIVING_AREA",
-                    "LOG_LAND_SF", "AREA_PER_ROOM", "BED_BATH"]:
+        for col in ["AGE", "IS_REMODELED", "BATH_TOTAL", "AREA_PER_ROOM", "BED_BATH"]:
             assert col in result.columns, f"Missing engineered column: {col}"

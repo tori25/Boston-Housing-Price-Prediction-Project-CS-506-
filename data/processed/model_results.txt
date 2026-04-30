@@ -1,28 +1,32 @@
 Boston Property Assessment FY2025 — Model Results
 ============================================================
 
-Dataset shape: (132611, 25)
-Training set: (106088, 24)   Test set: (26523, 24)
+Dataset shape: (132611, 53)
+Training set: (106088, 52)   Test set: (26523, 52)
+Evaluation: 5-fold cross-validation on training set (mean ± std)
 
 Story: linear baseline → regularization → non-linear → distance-based
 ------------------------------------------------------------
-Linear Regression          MAE=   253,069  RMSE=   388,393  R²=0.5087
+Linear Regression          MAE=   193,224±  2,012  RMSE=   308,200± 22,714  R²=0.6720±0.0532
   → Baseline. Fits a global plane through all features. No regularization.
 
-Ridge Regression           MAE=   253,046  RMSE=   388,391  R²=0.5087
+Ridge Regression           MAE=   193,191±  2,008  RMSE=   308,208± 22,730  R²=0.6719±0.0532
   → Adds L2 penalty — shrinks correlated coefficients, reduces overfitting.
 
-Lasso Regression           MAE=   252,134  RMSE=   388,520  R²=0.5084
+Lasso Regression           MAE=   191,417±  1,939  RMSE=   307,933± 21,277  R²=0.6728±0.0497
   → Adds L1 penalty — forces some coefficients to zero (implicit feature selection).
 
-Decision Tree              MAE=   203,991  RMSE=   304,670  R²=0.6977
+Decision Tree              MAE=   233,756±    868  RMSE=   359,091±  1,518  R²=0.5574±0.0104
   → Splits on single features. Captures non-linearity but high variance.
 
-KNN (k=10)                 MAE=   173,639  RMSE=   293,096  R²=0.7202
-  → Predicts from the 10 nearest properties by Euclidean distance.
+Random Forest              MAE=   100,694±  1,004  RMSE=   174,169±  1,463  R²=0.8959±0.0029
+  → 200 trees, each on a random feature subset. Reduces variance via averaging.
+
+KNN (k=5)                  MAE=   112,013±  1,702  RMSE=   193,807±  3,482  R²=0.8711±0.0042
+  → Predicts from the 5 nearest properties by Euclidean distance (k tuned by 5-fold CV).
 
 ------------------------------------------------------------
-Best model (lowest RMSE): KNN (k=10)
-  MAE:  $173,639
-  RMSE: $293,096
-  R²:   0.7202
+Best model (lowest CV RMSE): Random Forest
+  MAE:  $100,694 ± $1,004
+  RMSE: $174,169 ± $1,463
+  R²:   0.8959 ± 0.0029
