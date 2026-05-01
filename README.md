@@ -320,3 +320,9 @@ All plots saved to `plots/` after running `make visualize` and `make train`.
 ```bash
 pip install -r requirements.txt
 ```
+
+## Conclusion 
+
+My project shows that data scxiuence can predict Boston assessed property values with good accuracy. The biggest improvements came from cleaning the data carefully, removing leakage columns, adding useful engineered features, one-hot encoding ZIP codes, using cross-validation, and testing stronger models like Random Forest.
+
+My final best model was Random Forest, with an R squared of 0.894.
