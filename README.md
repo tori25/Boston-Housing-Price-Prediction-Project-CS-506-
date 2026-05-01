@@ -1,8 +1,6 @@
 # Boston Housing Price Prediction
 
-> **Presentation video:** *(YouTube link to be added before 5/1 deadline)*
-
----
+## Presentation Youtube link: https://youtu.be/URgHcsC8J_4 
 
 ## How to Build and Run
 
@@ -323,6 +321,6 @@ pip install -r requirements.txt
 
 ## Conclusion 
 
-My project shows that data scxiuence can predict Boston assessed property values with good accuracy. The biggest improvements came from cleaning the data carefully, removing leakage columns, adding useful engineered features, one-hot encoding ZIP codes, using cross-validation, and testing stronger models like Random Forest.
+My project shows that data science can predict Boston assessed property values with good accuracy. The biggest improvements came from cleaning the data carefully, removing leakage columns, adding useful engineered features, one-hot encoding ZIP codes, using cross-validation, and testing stronger models like Random Forest.
 
 My final best model was Random Forest, with an R squared of 0.894.
